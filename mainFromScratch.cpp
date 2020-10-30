@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include <set>
 #include <optional>
 
 const uint32_t WIDTH = 1920;
