@@ -29,7 +29,7 @@ endif()
 
 
 project(HuntWheel VERSION 0.1.0)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(imgui REQUIRED)
@@ -65,9 +65,9 @@ file(GLOB_RECURSE CPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.*)
 
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
-add_executable(HuntWheel mainFromScratch.cpp ${CPP_FILES} ${HPP_FILES})
+add_executable(HuntWheel mainFromScratch.cpp)# ${CPP_FILES} ${HPP_FILES})
 if(MSVC)
 	# 自定义编译规则
-	set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
+	#set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
 endif()
-target_link_libraries(HuntWheel PRIVATE glfw imgui ${VULKAN_LIB_LIST})
+target_link_libraries(HuntWheel PRIVATE glfw ${VULKAN_LIB_LIST})
