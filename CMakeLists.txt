@@ -64,6 +64,9 @@ LINK_DIRECTORIES("${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/lib/")
 file(GLOB_RECURSE CPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.*)
 
+# find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
+# target_include_directories(main PRIVATE ${TINYGLTF_INCLUDE_DIRS})
+
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
 add_executable(HuntWheel mainFromScratch.cpp)# ${CPP_FILES} ${HPP_FILES})
 if(MSVC)
