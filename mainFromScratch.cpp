@@ -12,6 +12,8 @@
 #include <set>
 #include <optional>
 
+#include <gltf_loader.h>
+
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const int MAX_FRAMES_IN_FLIGHT = 2;
@@ -1056,6 +1058,8 @@ private:
 
 int main() 
 {
+    TestLoadModel();
+    return 0;
     std::cout<<"hello world"<<std::endl;
     VulkanRendererApp app;
     try
