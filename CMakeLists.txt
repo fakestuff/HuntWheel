@@ -1,11 +1,13 @@
-cmake_minimum_required(VERSION 3.18.0)
+cmake_minimum_required(VERSION 3.19.0)
 message(STATUS "Attempting auto locate Vulkan using CMake......")
 	
 # Find Vulkan Path using CMake's Vulkan Module
 # This will return Boolean 'Vulkan_FOUND' indicating the status of find as success(ON) or fail(OFF).
 # Include directory path - 'Vulkan_INCLUDE_DIRS' and 'Vulkan_LIBRARY' with required libraries.
 find_package(Vulkan)
-
+if(NOT Vulkan_FOUND)
+set(Vulkan_INCLUDE_DIRS "C:/VulkanSDK/1.2.154.1")
+endif()
 # Try extracting VulkanSDK path from ${Vulkan_INCLUDE_DIRS}
 if (NOT ${Vulkan_INCLUDE_DIRS} STREQUAL "")
     set(VULKAN_PATH ${Vulkan_INCLUDE_DIRS})
@@ -59,6 +61,7 @@ endif(WIN32)
 # Define include path
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/include/")
+
 LINK_DIRECTORIES("${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/lib/")
 # Gather list of header and source files for compilation
 file(GLOB_RECURSE CPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
@@ -70,7 +73,9 @@ file(GLOB_RECURSE HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.*)
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
 add_executable(HuntWheel mainFromScratch.cpp)# ${CPP_FILES} ${HPP_FILES})
 if(MSVC)
+    #add_definitions(-D_USE_MATH_DEFINES)
+    add_definitions(-DNOMINMAX)
 	# 自定义编译规则
-	#set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
+	# set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
 endif()
 target_link_libraries(HuntWheel PRIVATE glfw ${VULKAN_LIB_LIST})

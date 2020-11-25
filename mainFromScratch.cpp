@@ -15,10 +15,10 @@
 
 #include <optional>
 
-#include <gltf_loader.h>
+//#include <gltf_loader.h>
 #include "SimpleMath.h"
 
-using namespace DirectX::SimpleMath;
+//using namespace DirectX::SimpleMath;
 using float2 = DirectX::SimpleMath::Vector2;
 using float3 = DirectX::SimpleMath::Vector3;
 using float4 = DirectX::SimpleMath::Vector4;
@@ -373,11 +373,8 @@ private:
                 static_cast<uint32_t>(width),
                 static_cast<uint32_t>(height)
             };
-
-            actualExtent.width = std::max(capabilities.minImageExtent.width, 
-                                std::min(capabilities.maxImageExtent.width, actualExtent.width));
-            actualExtent.height = std::max(capabilities.minImageExtent.height,
-                                std::min(capabilities.maxImageExtent.height, actualExtent.height));
+            actualExtent.width = std::max(capabilities.minImageExtent.width,std::min(capabilities.maxImageExtent.width, actualExtent.width));
+            actualExtent.height = std::max(capabilities.minImageExtent.height,std::min(capabilities.maxImageExtent.height, actualExtent.height));
             return actualExtent;
         }
         
