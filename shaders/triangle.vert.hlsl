@@ -1,6 +1,6 @@
 struct VSInput
 {
-    float2 Pos : POSITION0;
+    float3 Pos : POSITION0;
     float3 Color  : COLOR0;
 };
 
@@ -11,24 +11,19 @@ struct VSOutput
     float3 Color : COLOR0;
 };
 
-// static float2 positions[3] = {
-//     float2(0.0, -0.5),
-//     float2(0.5, 0.5),
-//     float2(-0.5, 0.5)
-// };
-
-// static float3 colors[3] = {
-//     float3(1.0, 0.0, 0.0),
-//     float3(0.0, 1.0, 0.0),
-//     float3(0.0, 0.0, 1.0)
-// };
-
-
+struct UBO
+{
+	row_major float4x4 model;
+	row_major float4x4 view;
+	row_major float4x4 proj;
+};
+cbuffer ubo : register(b0) { UBO ubo; }
 
 VSOutput main(VSInput input)
 {
 	VSOutput output = (VSOutput)0;
 	output.Color = input.Color;
-	output.Pos =  float4(input.Pos,0.0,1.0);
+    float4 pos =  mul(mul(mul(float4(input.Pos.xyz, 1.0), ubo.model),ubo.view),ubo.proj); // row major
+    output.Pos =  pos;
 	return output;
 }
