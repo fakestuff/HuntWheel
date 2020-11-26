@@ -797,9 +797,9 @@ private:
         UniformBufferObject ubo{};
         
         ubo.model = Matrix::CreateRotationY(time);//.Transpose();
-        ubo.view = Matrix::CreateLookAt(float3(2,2,2), float3(0,0,0), float3(0,1,0));
+        ubo.view = XMMatrixLookAtLH(float3(2,2,2), float3(0,0,0), float3(0,1,0));
         //ubo.view = ubo.view;//.Transpose();
-        ubo.proj = Matrix::CreatePerspectiveFieldOfView(3.14f / 2.0f, m_swapChainExtent.width / (float) m_swapChainExtent.height, 0.01f, 1000.0f);
+        ubo.proj = DirectX::XMMatrixPerspectiveFovLH(3.14f / 2.0f, m_swapChainExtent.width / (float) m_swapChainExtent.height, 0.01f, 1000.0f);
         ubo.proj._22 *= -1;
         //ubo.proj = ubo.proj.Transpose();
 
