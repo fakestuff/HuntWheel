@@ -53,7 +53,7 @@ endif()
 # Define directories and the contained folder and files inside.
 if(WIN32)
     source_group("include" REGULAR_EXPRESSION "include/*")
-    source_group("source" REGULAR_EXPRESSION "source/*")
+    source_group("source" REGULAR_EXPRESSION "src/*")
 endif(WIN32)
 
 
@@ -71,7 +71,7 @@ file(GLOB_RECURSE HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.*)
 # target_include_directories(main PRIVATE ${TINYGLTF_INCLUDE_DIRS})
 
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
-add_executable(HuntWheel mainFromScratch.cpp)# ${CPP_FILES} ${HPP_FILES})
+add_executable(HuntWheel mainFromScratch.cpp ${CPP_FILES} ${HPP_FILES})
 if(MSVC)
     #add_definitions(-D_USE_MATH_DEFINES)
     add_definitions(-DNOMINMAX)
