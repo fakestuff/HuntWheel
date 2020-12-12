@@ -60,22 +60,25 @@ endif(WIN32)
 
 # Define include path
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external)
 INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/include/")
 
 LINK_DIRECTORIES("${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/lib/")
 # Gather list of header and source files for compilation
 file(GLOB_RECURSE CPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.*)
+file(GLOB_RECURSE EXTERNAL_HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/*.*)
 
-# find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
-# target_include_directories(main PRIVATE ${TINYGLTF_INCLUDE_DIRS})
+
+
 
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
-add_executable(HuntWheel mainFromScratch.cpp ${CPP_FILES} ${HPP_FILES})
+add_executable(HuntWheel mainFromScratch.cpp ${CPP_FILES} ${HPP_FILES} ${EXTERNAL_HPP_FILES})
 if(MSVC)
     #add_definitions(-D_USE_MATH_DEFINES)
     add_definitions(-DNOMINMAX)
 	# 自定义编译规则
 	# set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
 endif()
+
 target_link_libraries(HuntWheel PRIVATE glfw ${VULKAN_LIB_LIST})

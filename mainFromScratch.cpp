@@ -17,12 +17,12 @@
 #include <optional>
 #include <chrono>
 
-//#include <gltf_loader.h>
+
 #include "SimpleMath.h"
 
 
 #include "textureManager.h"
-
+#include <gltf_loader.h>
 using namespace DirectX::SimpleMath;
 using float2 = DirectX::SimpleMath::Vector2;
 using float3 = DirectX::SimpleMath::Vector3;
@@ -125,7 +125,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
+    std::cout << filename << std::endl;
     if (!file.is_open()) {
         throw std::runtime_error("failed to open file!");
     }

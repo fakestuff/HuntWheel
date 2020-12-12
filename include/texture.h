@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include <vector>
-namespace TF
+namespace TF // TF stand for touch fish :)
 {
     enum CPUTextureFormat
     {
