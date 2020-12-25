@@ -13,9 +13,14 @@ struct VSOutput
     float2 UV: TEXCOORD0;
 };
 
-struct UBO
+struct PushConsts
 {
 	row_major float4x4 model;
+};
+[[vk::push_constant]]PushConsts pushConsts;
+
+struct UBO
+{
 	row_major float4x4 view;
 	row_major float4x4 proj;
 };
@@ -25,7 +30,7 @@ VSOutput main(VSInput input)
 {
 	VSOutput output = (VSOutput)0;
 	output.Color = input.Color;
-    float4 pos =  mul(mul(mul(float4(input.Pos.xyz, 1.0), ubo.model),ubo.view),ubo.proj); // row major
+    float4 pos =  mul(mul(mul(float4(input.Pos.xyz, 1.0), pushConsts.model),ubo.view),ubo.proj); // row major
     output.Pos =  pos;
     output.UV = input.UV;
 	return output;

@@ -71,28 +71,15 @@ const std::vector<Vertex> vertices = {
     {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
     {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
     {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-    {{-0.5f, -0.5, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, -0.5, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
 };
-// const std::vector<Vertex> vertices = {
-//     {{-0.5f, -0.5f, 0}, {1.0f, 0.0f, 0.0f}},
-//     {{0.5f, -0.5f, 0}, {0.0f, 1.0f, 0.0f}},
-//     {{0.5f, 0.5f, 0}, {0.0f, 0.0f, 1.0f}},
-//     {{-0.5f, 0.5f, 0}, {1.0f, 1.0f, 1.0f}}
-// };
 
 // 16_t for less than 65535 vertices
 const std::vector<uint32_t> indices = {
     0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
 };
 
-struct UniformBufferObject
+struct CameraUniformBufferObject
 {
-    float4x4 model;
     float4x4 view;
     float4x4 proj;
 };
@@ -102,7 +89,8 @@ const std::vector<const char*> validationLayers = {
 };
 
 const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
 };
 
 #ifdef NDEBUG
@@ -320,7 +308,6 @@ private:
         {
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
-
         return extensions;
     }
 
@@ -861,7 +848,7 @@ private:
 
     void createUniformBuffers() 
     {
-        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+        VkDeviceSize bufferSize = sizeof(CameraUniformBufferObject);
 
         m_uniformBuffers.resize(m_swapChainImages.size());
         m_uniformBuffersMemory.resize(m_swapChainImages.size());
@@ -874,13 +861,14 @@ private:
 
     void updateUniformBuffer(uint32_t currentImage) 
     {
+        // update camera buffer
         static auto startTime = std::chrono::high_resolution_clock::now();
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-        UniformBufferObject ubo{};
+        CameraUniformBufferObject ubo{};
         
-        ubo.model = Matrix::CreateRotationY(time);//.Transpose();
+        //ubo.model = Matrix::CreateRotationY(time);//.Transpose();
         ubo.view = XMMatrixLookAtLH(float3(2,2,2), float3(0,0,0), float3(0,1,0));
         //ubo.view = ubo.view;//.Transpose();
         ubo.proj = DirectX::XMMatrixPerspectiveFovLH(3.14f / 2.0f, m_swapChainExtent.width / (float) m_swapChainExtent.height, 0.01f, 1000.0f);
@@ -931,7 +919,7 @@ private:
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = m_uniformBuffers[i];
             bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(UniformBufferObject);
+            bufferInfo.range = sizeof(CameraUniformBufferObject);
 
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1377,12 +1365,19 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
         dynamicState.dynamicStateCount = 2;
         dynamicState.pDynamicStates = dynamicStates;
 
+        // Define the push constant range used by the pipeline layout
+		// Note that the spec only requires a minimum of 128 bytes, so for passing larger blocks of data you'd use UBOs or SSBOs
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(float4x4);
+
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 1; // Optional
         pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout; // Optional
-        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+        pipelineLayoutInfo.pushConstantRangeCount = 1; // Optional
+        pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange; // Optional
 
         if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS)
         {
@@ -1575,7 +1570,19 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
             vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
             vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[i], 0, nullptr);
-            vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+            for (int j = 0;j <4;j++)
+            {
+                float4x4 modelMatrix = Matrix::CreateTranslation(float3(0,j*0.5f,0));
+                vkCmdPushConstants(
+                                m_commandBuffers[i],
+                                m_pipelineLayout,
+                                VK_SHADER_STAGE_VERTEX_BIT,
+                                0,
+                                sizeof(float4x4),
+                                &modelMatrix);
+                vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+            }
+            
             vkCmdEndRenderPass(m_commandBuffers[i]);
             if (vkEndCommandBuffer(m_commandBuffers[i]) != VK_SUCCESS) 
             {
@@ -1804,7 +1811,7 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
 
 int main() 
 {
-    //TestLoadModel();
+    TestLoadModel();
     //return 0;
     std::cout<<"hello world"<<std::endl;
     VulkanRendererApp app;
