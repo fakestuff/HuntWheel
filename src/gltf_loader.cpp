@@ -70,7 +70,7 @@ GltfModel::GltfModel(TF::TFVulkanDevice vulkanDevice,std::string path)
     std::vector<uint32_t> indexBuffer; // prepare cpu data for uploading
     std::vector<Vertex> vertexBuffer;
 
-    bool fileLoaded = loader.LoadASCIIFromFile(&modelAsset, &err, &warn, "../../res/model/FlightHelmet/FlightHelmet.gltf");
+    bool fileLoaded = loader.LoadASCIIFromFile(&modelAsset, &err, &warn, path);
     if (!fileLoaded)
     {
         throw std::runtime_error("failed to open gltf file!");

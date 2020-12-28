@@ -1531,8 +1531,8 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
             //                     &modelMatrix);
             //     vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
             // }
-            float4x4 modelMatrix = Matrix::CreateScale(5.0f);
-            modelMatrix *= Matrix::CreateRotationY(1.0f);
+            float4x4 modelMatrix = Matrix::CreateScale(1.0f);
+            modelMatrix *= Matrix::CreateRotationY(0.0f);
             modelMatrix *= Matrix::CreateTranslation(float3(0,-2.0f,0));
             vkCmdPushConstants(
                                 m_commandBuffers[i],

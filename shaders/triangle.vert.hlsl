@@ -31,6 +31,6 @@ VSOutput main(VSInput input)
 	VSOutput output = (VSOutput)0;
     float4 pos =  mul(mul(mul(float4(input.Pos.xyz, 1.0), pushConsts.model),ubo.view),ubo.proj); // row major
     output.Pos =  pos;
-    output.UV = float2(input.UV.x,1.0-input.UV.y);
+    output.UV = float2(input.UV.x,input.UV.y);
 	return output;
 }
