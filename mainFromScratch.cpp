@@ -20,8 +20,11 @@
 
 #include "SimpleMath.h"
 
-
+#include <TFVulkanDevice.h>
+#include <VulkanBufferHelper.h>
+#include <TFVulkanDevice.h>
 #include "textureManager.h"
+
 #include <gltf_loader.h>
 using namespace DirectX::SimpleMath;
 using float2 = DirectX::SimpleMath::Vector2;
@@ -32,10 +35,12 @@ using float4x4 = DirectX::SimpleMath::Matrix;
 const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const int MAX_FRAMES_IN_FLIGHT = 2;
+static float t = 0;
 
 struct Vertex {
     float3 pos;
-    float3 color;
+    float3 normal;
+    float3 tangent;
     float2 texCoord;
     static VkVertexInputBindingDescription getBindingDescription() {
         VkVertexInputBindingDescription bindingDescription{};
@@ -45,8 +50,8 @@ struct Vertex {
         return bindingDescription;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
+    std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -55,22 +60,27 @@ struct Vertex {
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Vertex, color);
+    attributeDescriptions[1].offset = offsetof(Vertex, normal);
 
     attributeDescriptions[2].binding = 0;
     attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+    attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[2].offset = offsetof(Vertex, tangent);
+
+    attributeDescriptions[3].binding = 0;
+    attributeDescriptions[3].location = 3;
+    attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[3].offset = offsetof(Vertex, texCoord);
 
     return attributeDescriptions;
 }
 };
 
 const std::vector<Vertex> vertices = {
-    {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0, 0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0, 0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
 };
 
 // 16_t for less than 65535 vertices
@@ -161,6 +171,7 @@ private:
 #pragma region member
     GLFWwindow* m_window = nullptr;
 
+    TF::TFVulkanDevice m_tfDevice;
     VkInstance m_instance;
     VkDevice m_device;
     VkQueue m_graphicsQueue;
@@ -184,6 +195,8 @@ private:
     VkBuffer m_indexBuffer;
     VkDeviceMemory m_indexBufferMemory;
 
+    GltfModel* m_gltfModel;
+
     VkBuffer m_stagingBuffer;
     VkDeviceMemory m_stagingBufferMemory;
     uint32_t m_mipLevels;
@@ -203,6 +216,7 @@ private:
 
     VkRenderPass m_renderPass;
     VkPipeline m_graphicsPipeline;
+    VkPipeline m_gltfPipeline;
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
     VkCommandPool m_commandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
@@ -216,36 +230,11 @@ private:
 #pragma endregion
 
     VkCommandBuffer beginSingleTimeCommands() {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = m_commandPool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(m_device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        return commandBuffer;
+        return BeginSingleTimeCommands(m_device ,m_commandPool);
     }
 
     void endSingleTimeCommands(VkCommandBuffer commandBuffer) {
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(m_graphicsQueue);
-
-        vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
+        EndSingleTimeCommands(m_device, m_graphicsQueue, m_commandPool,commandBuffer);
     }
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height) 
     {
@@ -728,48 +717,7 @@ private:
 
     }
 #pragma endregion
-#pragma region mem
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) 
-    {
-        VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
-
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) 
-        {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) 
-            {
-                return i;
-            }
-        }
-        throw std::runtime_error("failed to find suitable memory type!");
-    }
-#pragma endregion
 #pragma region buffer
-    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
-        bufferInfo.usage = usage;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateBuffer(m_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(m_device, buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-        if (vkAllocateMemory(m_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("failed to allocate buffer memory!");
-        }
-
-        vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
-    }
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) 
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
@@ -780,18 +728,19 @@ private:
 
         endSingleTimeCommands(commandBuffer);
     }
+    
     void createVertexBuffer()
     {
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        createBuffer(m_physicalDevice,m_device,bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
         
         void* data;
         vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, vertices.data(), bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer, m_vertexBufferMemory);
+        createBuffer(m_physicalDevice,m_device,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer, m_vertexBufferMemory);
         copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
 
         vkDestroyBuffer(m_device, stagingBuffer, nullptr);
@@ -802,14 +751,14 @@ private:
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        createBuffer(m_physicalDevice,m_device,bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
         void* data;
         vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
         memcpy(data, indices.data(), (size_t) bufferSize);
         vkUnmapMemory(m_device, stagingBufferMemory);
 
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_indexBuffer, m_indexBufferMemory);
+        createBuffer(m_physicalDevice,m_device,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_indexBuffer, m_indexBufferMemory);
 
         copyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
 
@@ -855,7 +804,7 @@ private:
 
         for (size_t i = 0; i < m_swapChainImages.size(); i++) 
         {
-            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniformBuffers[i], m_uniformBuffersMemory[i]);
+            createBuffer(m_physicalDevice,m_device,bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_uniformBuffers[i], m_uniformBuffersMemory[i]);
         }
     }
 
@@ -865,7 +814,7 @@ private:
         static auto startTime = std::chrono::high_resolution_clock::now();
 
         auto currentTime = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+        t = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
         CameraUniformBufferObject ubo{};
         
         //ubo.model = Matrix::CreateRotationY(time);//.Transpose();
@@ -1063,7 +1012,7 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = findMemoryType(m_physicalDevice,memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(m_device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate image memory!");
@@ -1074,11 +1023,11 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
 
     void createTextureImage ()
     {
-        std::string imgPath("../../res/textures/neko.png");
+        std::string imgPath("../../res/model/SciFiHelmet/SciFiHelmet_BaseColor.png");
         auto texSharedPtr = TF::TextureManager::Get()->LoadTexture(imgPath);
         VkDeviceSize imageSize = texSharedPtr->Width * texSharedPtr->Height * 4;
         m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texSharedPtr->Width, texSharedPtr->Height)))) + 1;
-        createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        createBuffer(m_physicalDevice,m_device,imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         m_stagingBuffer, m_stagingBufferMemory);
         void* data;
         vkMapMemory(m_device, m_stagingBufferMemory, 0, imageSize, 0, &data);
@@ -1570,18 +1519,32 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
             vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
             vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
             vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[i], 0, nullptr);
-            for (int j = 0;j <4;j++)
-            {
-                float4x4 modelMatrix = Matrix::CreateTranslation(float3(0,j*0.5f,0));
-                vkCmdPushConstants(
+            // for (int j = 0;j <4;j++)
+            // {
+            //     float4x4 modelMatrix = Matrix::CreateTranslation(float3(0,j*0.5f,0));
+            //     vkCmdPushConstants(
+            //                     m_commandBuffers[i],
+            //                     m_pipelineLayout,
+            //                     VK_SHADER_STAGE_VERTEX_BIT,
+            //                     0,
+            //                     sizeof(float4x4),
+            //                     &modelMatrix);
+            //     vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+            // }
+            float4x4 modelMatrix = Matrix::CreateScale(5.0f);
+            modelMatrix *= Matrix::CreateRotationY(1.0f);
+            modelMatrix *= Matrix::CreateTranslation(float3(0,-2.0f,0));
+            vkCmdPushConstants(
                                 m_commandBuffers[i],
                                 m_pipelineLayout,
                                 VK_SHADER_STAGE_VERTEX_BIT,
                                 0,
                                 sizeof(float4x4),
                                 &modelMatrix);
-                vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-            }
+            //vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+            m_gltfModel->Render(m_commandBuffers[i]);
+            
             
             vkCmdEndRenderPass(m_commandBuffers[i]);
             if (vkEndCommandBuffer(m_commandBuffers[i]) != VK_SUCCESS) 
@@ -1696,6 +1659,10 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
         createDepthResources();
         createFramebuffers();
         createCommandPool();
+        m_tfDevice.physicsDevice = m_physicalDevice;
+        m_tfDevice.cmdPool = m_commandPool;
+        m_tfDevice.logicalDevice = m_device;
+        m_tfDevice.graphicsQueue = m_graphicsQueue;
         createTextureImage();
         createTextureImageView();
         createTextureSampler();
@@ -1704,8 +1671,11 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
         createUniformBuffers();
         createDescriptorPool();
         createDescriptorSets();
+        m_gltfModel = new GltfModel(m_tfDevice,"../../res/model/SciFiHelmet/SciFiHelmet.gltf");
         createCommandBuffers();
         createSyncObjects();
+        
+        
     }
 
     void cleanupSwapChain() 
@@ -1777,6 +1747,8 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
     {
         cleanupSwapChain();
 
+        delete(m_gltfModel);
+
         vkDestroySampler(m_device, m_textureSampler, nullptr);
         vkDestroyImageView(m_device, m_textureImageView, nullptr);
 
@@ -1811,9 +1783,7 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat f
 
 int main() 
 {
-    TestLoadModel();
-    //return 0;
-    std::cout<<"hello world"<<std::endl;
+    std::cout<<"Start Engine"<<std::endl;
     VulkanRendererApp app;
     try
     {
@@ -1824,7 +1794,7 @@ int main()
         std::cerr << e.what() << '\n';
         return EXIT_FAILURE;
     }
-
+    std::cout<<"Shutdown Engine"<<std::endl;
     return EXIT_SUCCESS;
     
 }
