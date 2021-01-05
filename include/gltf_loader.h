@@ -53,6 +53,12 @@ public:
         std::vector<Primitive> primitives;
     };
 
+    // A glTF texture stores a reference to the image and a sampler
+	// In this sample, we are only interested in the image
+	struct Texture {
+		int32_t imageIndex;
+	};
+
     struct SceneNode
     {
         SceneNode* parent;
@@ -62,19 +68,25 @@ public:
     };
 
 
-    GltfModel(TF::TFVulkanDevice vulkanDevice, std::string path);
+    GltfModel(TF::TFVulkanDevice vulkanDevice, std::string path, float scale);
     ~GltfModel();
     void LoadNode(const tinygltf::Node& inputNode, const tinygltf::Model& modelAsset, 
                     SceneNode* parent,std::vector<Vertex>& vertexBuffer, std::vector<uint32_t>& indexBuffer);
-    // void LoadTextures(tinygltf::Model& input)
-    // void LoadMaterials(tinygltf::Model& inpuit)
+    void LoadImages(tinygltf::Model& modelAsset);
+    void LoadTextures(tinygltf::Model& modelAsset);
+    void LoadMaterials(tinygltf::Model& modelAsset);
     void UploadModel(const std::vector<Vertex>& uploadingVertexBuffer,const std::vector<uint32_t>& uploadingIndexBuffer);
     void Render(VkCommandBuffer commandBuffer);
     void RenderNode(VkCommandBuffer commandBuffer);
+
+    
+    
     TF::TFVulkanDevice m_vulkanDevice;
     std::vector<SceneNode> m_nodes;
+    std::vector<Texture> m_textures; // map textures
     PrimitiveVertexBuffer m_vertexBuffer;
     PrimitiveIndexBuffer m_indexBuffer;
+    float m_scale;
 
     
 };

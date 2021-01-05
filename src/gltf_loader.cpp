@@ -59,8 +59,9 @@ void TestLoadModel()
 }
 
 
-GltfModel::GltfModel(TF::TFVulkanDevice vulkanDevice,std::string path)
+GltfModel::GltfModel(TF::TFVulkanDevice vulkanDevice,std::string path, float scale)
 {
+    m_scale = scale;
     m_vulkanDevice = vulkanDevice;
     Model modelAsset;
     TinyGLTF loader;
@@ -78,8 +79,11 @@ GltfModel::GltfModel(TF::TFVulkanDevice vulkanDevice,std::string path)
     else
     {
         // load images
+        LoadImages(modelAsset);
         // load materials
+        LoadMaterials(modelAsset);
         // load textures
+        LoadTextures(modelAsset);
         const Scene& scene = modelAsset.scenes[0];
         for (auto i =0; i<scene.nodes.size();i++)
         {
@@ -251,6 +255,71 @@ void GltfModel::LoadNode(const tinygltf::Node& inputNode, const tinygltf::Model&
     }
 }
 
+void GltfModel::LoadImages(tinygltf::Model& modelAsset)
+{
+    for (size_t i = 0; i < modelAsset.images.size(); i++) 
+    {
+        tinygltf::Image& glTFImage = modelAsset.images[i];
+
+        unsigned char* buffer = nullptr;
+        VkDeviceSize bufferSize = 0;
+        bool deleteBuffer = false;
+        // We convert RGB-only images to RGBA, as most devices don't support RGB-formats in Vulkan
+        if (glTFImage.component == 3) 
+        {
+            bufferSize = glTFImage.width * glTFImage.height * 4;
+            buffer = new unsigned char[bufferSize];
+            unsigned char* rgba = buffer;
+            unsigned char* rgb = &glTFImage.image[0];
+            for (size_t i = 0; i < glTFImage.width * glTFImage.height; ++i) 
+            {
+                memcpy(rgba, rgb, sizeof(unsigned char) * 3);
+                rgba += 4;
+                rgb += 3;
+            }
+            deleteBuffer = true;
+        }
+        else 
+        {
+            buffer = &glTFImage.image[0];
+            bufferSize = glTFImage.image.size();
+        }
+
+        //images[i].texture.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, vulkanDevice, copyQueue);
+        if (deleteBuffer) {
+            delete buffer;
+        }
+    }
+}
+
+
+void GltfModel::LoadTextures(tinygltf::Model& modelAsset)
+{
+    m_textures.resize(modelAsset.textures.size());
+    for (size_t i = 0; i < modelAsset.textures.size(); i++) {
+        m_textures[i].imageIndex = modelAsset.textures[i].source;
+    }
+}
+
+void GltfModel::LoadMaterials(tinygltf::Model& modelAsset)
+{
+    //materials.resize(modelAsset.materials.size());
+    for (size_t i = 0; i < modelAsset.materials.size(); i++) {
+        // We only read the most basic properties required for our sample
+        tinygltf::Material glTFMaterial = modelAsset.materials[i];
+        std::cout << glTFMaterial.name <<std::endl;
+
+        // Get the base color factor
+        // if (glTFMaterial.values.find("baseColorFactor") != glTFMaterial.values.end()) {
+        //     materials[i].baseColorFactor = glm::make_vec4(glTFMaterial.values["baseColorFactor"].ColorFactor().data());
+        // }
+        // // Get base color texture index
+        // if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
+        //     materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
+        // }
+    }
+}
+
 void GltfModel::UploadModel( const std::vector<Vertex>& uploadingVertexBuffer,const std::vector<uint32_t>& uploadingIndexBuffer)
 {
     size_t vertexBufferSize = uploadingVertexBuffer.size() * sizeof(GltfModel::Vertex);
@@ -320,3 +389,4 @@ void GltfModel::RenderNode(VkCommandBuffer commandBuffer)
 {
     
 }
+
