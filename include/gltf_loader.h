@@ -8,6 +8,7 @@
 #include "SimpleMath.h"
 #include "tiny_gltf.h"
 #include <TFVulkanDevice.h>
+#include <texture.h>
 using namespace DirectX::SimpleMath;
 using float2 = DirectX::SimpleMath::Vector2;
 using float3 = DirectX::SimpleMath::Vector3;
@@ -53,11 +54,23 @@ public:
         std::vector<Primitive> primitives;
     };
 
+    // A glTF material stores information in e.g. the texture that is attached to it and colors
+	struct Material {
+		//glm::vec4 baseColorFactor = glm::vec4(1.0f);
+		uint32_t baseColorTextureIndex;
+	};
+
     // A glTF texture stores a reference to the image and a sampler
 	// In this sample, we are only interested in the image
 	struct Texture {
 		int32_t imageIndex;
 	};
+
+    struct Image
+    {
+        TF::Texture2D texture;
+        VkDescriptorSet descriptorSet;
+    };
 
     struct SceneNode
     {
@@ -76,14 +89,16 @@ public:
     void LoadTextures(tinygltf::Model& modelAsset);
     void LoadMaterials(tinygltf::Model& modelAsset);
     void UploadModel(const std::vector<Vertex>& uploadingVertexBuffer,const std::vector<uint32_t>& uploadingIndexBuffer);
-    void Render(VkCommandBuffer commandBuffer);
-    void RenderNode(VkCommandBuffer commandBuffer);
+    void Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
+    void DrawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, const SceneNode& node);
 
     
     
     TF::TFVulkanDevice m_vulkanDevice;
     std::vector<SceneNode> m_nodes;
+    std::vector<Image> m_images;
     std::vector<Texture> m_textures; // map textures
+    std::vector<Material> m_materials;
     PrimitiveVertexBuffer m_vertexBuffer;
     PrimitiveIndexBuffer m_indexBuffer;
     float m_scale;

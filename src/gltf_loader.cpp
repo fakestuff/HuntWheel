@@ -96,6 +96,10 @@ GltfModel::GltfModel(TF::TFVulkanDevice vulkanDevice,std::string path, float sca
 
 GltfModel::~GltfModel()
 {
+    for (int i = 0; i<m_images.size();i++)
+    {
+        m_images[i].texture.Destroy();
+    }
     vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_vertexBuffer.buffer, nullptr);
     vkFreeMemory(m_vulkanDevice.logicalDevice, m_vertexBuffer.memory, nullptr);
     vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_indexBuffer.buffer, nullptr);
@@ -257,6 +261,7 @@ void GltfModel::LoadNode(const tinygltf::Node& inputNode, const tinygltf::Model&
 
 void GltfModel::LoadImages(tinygltf::Model& modelAsset)
 {
+    m_images.resize(modelAsset.images.size());
     for (size_t i = 0; i < modelAsset.images.size(); i++) 
     {
         tinygltf::Image& glTFImage = modelAsset.images[i];
@@ -284,8 +289,8 @@ void GltfModel::LoadImages(tinygltf::Model& modelAsset)
             buffer = &glTFImage.image[0];
             bufferSize = glTFImage.image.size();
         }
-
-        //images[i].texture.fromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, vulkanDevice, copyQueue);
+        std::cout<<glTFImage.uri<<std::endl;
+        m_images[i].texture.FromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, &m_vulkanDevice, m_vulkanDevice.graphicsQueue);
         if (deleteBuffer) {
             delete buffer;
         }
@@ -303,7 +308,7 @@ void GltfModel::LoadTextures(tinygltf::Model& modelAsset)
 
 void GltfModel::LoadMaterials(tinygltf::Model& modelAsset)
 {
-    //materials.resize(modelAsset.materials.size());
+    m_materials.resize(modelAsset.materials.size());
     for (size_t i = 0; i < modelAsset.materials.size(); i++) {
         // We only read the most basic properties required for our sample
         tinygltf::Material glTFMaterial = modelAsset.materials[i];
@@ -313,10 +318,11 @@ void GltfModel::LoadMaterials(tinygltf::Model& modelAsset)
         // if (glTFMaterial.values.find("baseColorFactor") != glTFMaterial.values.end()) {
         //     materials[i].baseColorFactor = glm::make_vec4(glTFMaterial.values["baseColorFactor"].ColorFactor().data());
         // }
-        // // Get base color texture index
-        // if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
-        //     materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
-        // }
+        // Get base color texture index
+        if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
+            std::cout << glTFMaterial.values["baseColorTexture"].TextureIndex() <<std::endl;
+            m_materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
+        }
     }
 }
 
@@ -342,7 +348,7 @@ void GltfModel::UploadModel( const std::vector<Vertex>& uploadingVertexBuffer,co
     //     &vertexStaging.buffer,
     //     &vertexStaging.memory,
     //     vertexBuffer.data()));
-    createBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexStaging.buffer, vertexStaging.memory);
+    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexStaging.buffer, vertexStaging.memory);
         
     void* data;
     vkMapMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory, 0, vertexBufferSize, 0, &data);
@@ -357,14 +363,14 @@ void GltfModel::UploadModel( const std::vector<Vertex>& uploadingVertexBuffer,co
     //     &indexStaging.buffer,
     //     &indexStaging.memory,
     //     indexBuffer.data()));
-    createBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indexStaging.buffer, indexStaging.memory);
+    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indexStaging.buffer, indexStaging.memory);
         
     vkMapMemory(m_vulkanDevice.logicalDevice, indexStaging.memory, 0, indexBufferSize, 0, &data);
     memcpy(data, uploadingIndexBuffer.data(), indexBufferSize);
     vkUnmapMemory(m_vulkanDevice.logicalDevice, indexStaging.memory);
 
-    createBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer.buffer, m_vertexBuffer.memory);
-    createBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_indexBuffer.buffer, m_indexBuffer.memory);
+    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer.buffer, m_vertexBuffer.memory);
+    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_indexBuffer.buffer, m_indexBuffer.memory);
 
     CopyBuffer(m_vulkanDevice.logicalDevice, m_vulkanDevice.graphicsQueue, m_vulkanDevice.cmdPool,vertexStaging.buffer, m_vertexBuffer.buffer, vertexBufferSize);
     CopyBuffer(m_vulkanDevice.logicalDevice, m_vulkanDevice.graphicsQueue, m_vulkanDevice.cmdPool,indexStaging.buffer, m_indexBuffer.buffer, indexBufferSize);
@@ -376,17 +382,44 @@ void GltfModel::UploadModel( const std::vector<Vertex>& uploadingVertexBuffer,co
 
 }
 
-void GltfModel::Render(VkCommandBuffer commandBuffer)
+void GltfModel::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout)
 {
     VkBuffer vertexBuffers[] = {m_vertexBuffer.buffer};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indexBuffer.count), 1, 0, 0, 0);
+    //vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indexBuffer.count), 1, 0, 0, 0);
+
+    for (auto& node : m_nodes) {
+        DrawNode(commandBuffer, pipelineLayout, node);
+    }
 }
 
-void GltfModel::RenderNode(VkCommandBuffer commandBuffer)
+void GltfModel::DrawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, const SceneNode& node)
 {
-    
+    if (node.mesh.primitives.size() > 0) {
+			// Pass the node's matrix via push constants
+			// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
+			//glm::mat4 nodeMatrix = node.matrix;
+			SceneNode* currentParent = node.parent;
+			// while (currentParent) {
+			// 	nodeMatrix = currentParent->matrix * nodeMatrix;
+			// 	currentParent = currentParent->parent;
+			// }
+			// Pass the final matrix to the vertex shader using push constants
+			//vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
+			for (const GltfModel::Primitive& primitive : node.mesh.primitives) {
+				if (primitive.indexCount > 0) {
+					// Get the texture index for this primitive
+					GltfModel::Texture texture = m_textures[m_materials[primitive.materialIndex].baseColorTextureIndex];
+					// Bind the descriptor for the current primitive's texture
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &m_images[texture.imageIndex].descriptorSet, 0, nullptr);
+					vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+				}
+			}
+		}
+		for (auto& child : node.children) {
+			DrawNode(commandBuffer, pipelineLayout, child);
+		}
 }
 
