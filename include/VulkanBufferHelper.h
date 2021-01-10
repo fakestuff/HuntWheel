@@ -11,3 +11,4 @@ void CopyBufferToImage(VkDevice device, VkQueue queue, VkCommandPool commandPool
 void GenerateMipmaps(VkPhysicalDevice physicalDevice,VkDevice device, VkQueue queue, VkCommandPool commandPool,VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 VkImageView CreateImageView(VkDevice device,VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 VkSampler CreateTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device, int mipLevel);
+VkWriteDescriptorSet WriteDescriptorSet(VkDescriptorSet dstSet, VkDescriptorType type, uint32_t binding, VkDescriptorImageInfo *imageInfo, uint32_t descriptorCount = 1);

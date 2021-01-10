@@ -776,12 +776,16 @@ private:
         uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
-        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-        samplerLayoutBinding.binding = 0;
-        samplerLayoutBinding.descriptorCount = 1;
-        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        samplerLayoutBinding.pImmutableSamplers = nullptr;
-        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        std::array<VkDescriptorSetLayoutBinding,3> samplerLayoutBinding{};
+        for (int i = 0;i<3;i++)
+        {
+            samplerLayoutBinding[i].binding = i;
+            samplerLayoutBinding[i].descriptorCount = 1;
+            samplerLayoutBinding[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            samplerLayoutBinding[i].pImmutableSamplers = nullptr;
+            samplerLayoutBinding[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        }
+        
 
 
 
@@ -792,8 +796,8 @@ private:
 
         VkDescriptorSetLayoutCreateInfo samplerLayoutInfo{};
         samplerLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        samplerLayoutInfo.bindingCount = 1;
-        samplerLayoutInfo.pBindings = &samplerLayoutBinding;
+        samplerLayoutInfo.bindingCount = 3;
+        samplerLayoutInfo.pBindings = samplerLayoutBinding.data();
 
         if (vkCreateDescriptorSetLayout(m_device, &uboLayoutInfo, nullptr, &m_descriptorSetLayoutMatrices) != VK_SUCCESS) {
             throw std::runtime_error("failed to create matrices descriptor set layout!");
@@ -906,24 +910,21 @@ private:
             vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
         }
 
-        for (auto& image : m_gltfModel->m_images)
+        for (auto& mat : m_gltfModel->m_materials)
         {
             VkDescriptorSetAllocateInfo samplerAllocInfo{};
             samplerAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             samplerAllocInfo.descriptorPool = m_descriptorPool;
             samplerAllocInfo.descriptorSetCount = 1;
             samplerAllocInfo.pSetLayouts = &m_descriptorSetLayoutTextures;
-            vkAllocateDescriptorSets(m_device, &samplerAllocInfo, &image.descriptorSet);
-            VkWriteDescriptorSet descriptorWrite {};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet = image.descriptorSet;
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pImageInfo = &image.texture.m_descriptor;
-
-			vkUpdateDescriptorSets(m_device, 1, &descriptorWrite, 0, nullptr);
+            vkAllocateDescriptorSets(m_device, &samplerAllocInfo, &mat.descriptorSet);
+            std::vector<VkWriteDescriptorSet> writeDescriptorSets = 
+            {
+                WriteDescriptorSet(mat.descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &m_gltfModel->m_images[mat.baseColorTextureIndex].texture.m_descriptor),
+			    WriteDescriptorSet(mat.descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &m_gltfModel->m_images[mat.normalTextureIndex].texture.m_descriptor),
+                WriteDescriptorSet(mat.descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2, &m_gltfModel->m_images[mat.metallicRoughnessTextureIndex].texture.m_descriptor),
+            };
+			vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
         }
     }
 #pragma endregion

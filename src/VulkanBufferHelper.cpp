@@ -337,3 +337,20 @@ VkSampler CreateTextureSampler(VkPhysicalDevice physicalDevice, VkDevice device,
     return sampler;
 
 }
+
+VkWriteDescriptorSet WriteDescriptorSet(
+    VkDescriptorSet dstSet,
+    VkDescriptorType type,
+    uint32_t binding,
+    VkDescriptorImageInfo *imageInfo,
+    uint32_t descriptorCount)
+{
+    VkWriteDescriptorSet writeDescriptorSet {};
+    writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet.dstSet = dstSet;
+    writeDescriptorSet.descriptorType = type;
+    writeDescriptorSet.dstBinding = binding;
+    writeDescriptorSet.pImageInfo = imageInfo;
+    writeDescriptorSet.descriptorCount = descriptorCount;
+    return writeDescriptorSet;
+}

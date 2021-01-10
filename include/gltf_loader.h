@@ -58,6 +58,9 @@ public:
 	struct Material {
 		//glm::vec4 baseColorFactor = glm::vec4(1.0f);
 		uint32_t baseColorTextureIndex;
+        uint32_t normalTextureIndex;
+        uint32_t metallicRoughnessTextureIndex;
+        VkDescriptorSet descriptorSet;
 	};
 
     // A glTF texture stores a reference to the image and a sampler
@@ -69,7 +72,7 @@ public:
     struct Image
     {
         TF::Texture2D texture;
-        VkDescriptorSet descriptorSet;
+        //VkDescriptorSet descriptorSet;
     };
 
     struct SceneNode

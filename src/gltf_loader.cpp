@@ -290,7 +290,20 @@ void GltfModel::LoadImages(tinygltf::Model& modelAsset)
             bufferSize = glTFImage.image.size();
         }
         std::cout<<glTFImage.uri<<std::endl;
-        m_images[i].texture.FromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, &m_vulkanDevice, m_vulkanDevice.graphicsQueue);
+        TF::TextureUsage usage = TF::TextureUsage::Albedo;
+        if (glTFImage.uri.find("BaseColor") != std::string::npos)
+        {
+            usage = TF::TextureUsage::Albedo;
+        }
+        else if (glTFImage.uri.find("Normal")!= std::string::npos)
+        {
+            usage = TF::TextureUsage::Normal;
+        }
+        else if(glTFImage.uri.find("Metal")!= std::string::npos)
+        {
+            usage = TF::TextureUsage::MetallicRoughness;
+        }
+        m_images[i].texture.FromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, &m_vulkanDevice, m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,usage);
         if (deleteBuffer) {
             delete buffer;
         }
@@ -322,7 +335,23 @@ void GltfModel::LoadMaterials(tinygltf::Model& modelAsset)
         if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
             std::cout << glTFMaterial.values["baseColorTexture"].TextureIndex() <<std::endl;
             m_materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
+            
+            //"metallicRoughnessTexture"
+            //"normalTexture"
         }
+        
+        if (glTFMaterial.normalTexture.index > -1) {
+            std::cout << glTFMaterial.normalTexture.index <<std::endl;
+            m_materials[i].normalTextureIndex = glTFMaterial.normalTexture.index;
+            //"metallicRoughnessTexture"
+        }
+        
+        if (glTFMaterial.values.find("metallicRoughnessTexture") != glTFMaterial.values.end()) {
+            std::cout << glTFMaterial.values["metallicRoughnessTexture"].TextureIndex() <<std::endl;
+            m_materials[i].metallicRoughnessTextureIndex = glTFMaterial.values["metallicRoughnessTexture"].TextureIndex();
+            //"metallicRoughnessTexture"
+        }
+            
     }
 }
 
@@ -410,11 +439,10 @@ void GltfModel::DrawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelin
 			//vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
 			for (const GltfModel::Primitive& primitive : node.mesh.primitives) {
 				if (primitive.indexCount > 0) {
-					// Get the texture index for this primitive
-					GltfModel::Texture texture = m_textures[m_materials[primitive.materialIndex].baseColorTextureIndex];
+
 					// Bind the descriptor for the current primitive's texture
-					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &m_images[texture.imageIndex].descriptorSet, 0, nullptr);
-					vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &m_materials[primitive.materialIndex].descriptorSet, 0, nullptr);
+                    vkCmdDrawIndexed(commandBuffer, primitive.indexCount, 1, primitive.firstIndex, 0, 0);
 				}
 			}
 		}

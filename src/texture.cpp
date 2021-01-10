@@ -56,12 +56,15 @@ namespace TF
     }
 
 
-    void Texture2D::FromBuffer(void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight, TFVulkanDevice *device, VkQueue copyQueue, VkFilter filter, VkImageUsageFlags imageUsageFlags, VkImageLayout imageLayout)
+    void Texture2D::FromBuffer(void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight, TFVulkanDevice *device, VkQueue copyQueue, VkFilter filter, VkImageUsageFlags imageUsageFlags, VkImageLayout imageLayout, TextureUsage usage)
 	{
 		assert(buffer);
 
         m_device = device;
         m_imageLayout = imageLayout;
+        m_usage = usage;
+        m_width = texWidth;
+        m_height = texHeight;
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         VkDeviceSize imageSize = texWidth * texHeight * 4;

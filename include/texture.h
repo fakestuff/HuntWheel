@@ -13,6 +13,13 @@ namespace TF // TF stand for touch fish :)
         FLOAT16X3,
         FLOAT16X4,
     };
+
+    enum TextureUsage
+    {
+        Albedo,
+        Normal,
+        MetallicRoughness,
+    };
     class Texture // TODO: Refractor this later, temp hack for now
     {
         public:
@@ -62,6 +69,7 @@ namespace TF // TF stand for touch fish :)
         VkImageView m_view;
         VkDescriptorImageInfo m_descriptor;
         VkSampler m_sampler;
+        TextureUsage m_usage;
         void UpdateDescriptor();
         void Destroy();
         void FromBuffer(
@@ -74,7 +82,8 @@ namespace TF // TF stand for touch fish :)
             VkQueue             copyQueue,
             VkFilter            filter          = VK_FILTER_LINEAR,
             VkImageUsageFlags   imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
-            VkImageLayout       imageLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            VkImageLayout       imageLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            TextureUsage        usage           = TextureUsage::Albedo);
     };
 
 
