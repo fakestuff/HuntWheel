@@ -50,7 +50,7 @@ void TestLoadModel()
                 const tinygltf::Primitive& glTFPrimitive = mesh.primitives[j];
                 for(auto it = glTFPrimitive.attributes.begin();it != glTFPrimitive.attributes.end();it++)
                 {
-                    std::cout << it->first <<std::endl;
+                    //std::cout << it->first <<std::endl;
                 }
             }
         }
@@ -289,7 +289,7 @@ void GltfModel::LoadImages(tinygltf::Model& modelAsset)
             buffer = &glTFImage.image[0];
             bufferSize = glTFImage.image.size();
         }
-        std::cout<<glTFImage.uri<<std::endl;
+        //std::cout<<glTFImage.uri<<std::endl;
         TF::TextureUsage usage = TF::TextureUsage::Albedo;
         if (glTFImage.uri.find("BaseColor") != std::string::npos)
         {
@@ -325,7 +325,7 @@ void GltfModel::LoadMaterials(tinygltf::Model& modelAsset)
     for (size_t i = 0; i < modelAsset.materials.size(); i++) {
         // We only read the most basic properties required for our sample
         tinygltf::Material glTFMaterial = modelAsset.materials[i];
-        std::cout << glTFMaterial.name <<std::endl;
+        //std::cout << glTFMaterial.name <<std::endl;
 
         // Get the base color factor
         // if (glTFMaterial.values.find("baseColorFactor") != glTFMaterial.values.end()) {
@@ -333,7 +333,7 @@ void GltfModel::LoadMaterials(tinygltf::Model& modelAsset)
         // }
         // Get base color texture index
         if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
-            std::cout << glTFMaterial.values["baseColorTexture"].TextureIndex() <<std::endl;
+            //std::cout << glTFMaterial.values["baseColorTexture"].TextureIndex() <<std::endl;
             m_materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
             
             //"metallicRoughnessTexture"
@@ -341,13 +341,13 @@ void GltfModel::LoadMaterials(tinygltf::Model& modelAsset)
         }
         
         if (glTFMaterial.normalTexture.index > -1) {
-            std::cout << glTFMaterial.normalTexture.index <<std::endl;
+            //std::cout << glTFMaterial.normalTexture.index <<std::endl;
             m_materials[i].normalTextureIndex = glTFMaterial.normalTexture.index;
             //"metallicRoughnessTexture"
         }
         
         if (glTFMaterial.values.find("metallicRoughnessTexture") != glTFMaterial.values.end()) {
-            std::cout << glTFMaterial.values["metallicRoughnessTexture"].TextureIndex() <<std::endl;
+            //std::cout << glTFMaterial.values["metallicRoughnessTexture"].TextureIndex() <<std::endl;
             m_materials[i].metallicRoughnessTextureIndex = glTFMaterial.values["metallicRoughnessTexture"].TextureIndex();
             //"metallicRoughnessTexture"
         }
@@ -359,7 +359,7 @@ void GltfModel::UploadModel( const std::vector<Vertex>& uploadingVertexBuffer,co
 {
     size_t vertexBufferSize = uploadingVertexBuffer.size() * sizeof(GltfModel::Vertex);
     size_t indexBufferSize = uploadingIndexBuffer.size() * sizeof(uint32_t);
-    std::cout <<vertexBufferSize<<std::endl;
+    //std::cout <<vertexBufferSize<<std::endl;
     m_indexBuffer.count = static_cast<uint32_t>(uploadingIndexBuffer.size());
     struct StagingBuffer
     {

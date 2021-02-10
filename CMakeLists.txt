@@ -34,9 +34,8 @@ project(HuntWheel VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(imgui REQUIRED)
 find_package(glfw3 3.3.2 CONFIG REQUIRED)
-
+find_package(imgui CONFIG REQUIRED)
 
 # vulkan-1 library for build Vulkan application.
 set(VULKAN_LIB_LIST "vulkan-1")
@@ -60,20 +59,21 @@ endif(WIN32)
 
 # Define include path
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/)
 INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/include/")
 
 LINK_DIRECTORIES("${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/lib/")
 # Gather list of header and source files for compilation
 file(GLOB_RECURSE CPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*.*)
-file(GLOB_RECURSE EXTERNAL_HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/*.*)
+file(GLOB_RECURSE EXTERNAL_CPP_FILES ${CMAKE_CURRENT_SOURCE_DIR} REGULAR_EXPRESSION "external/*.cpp")
+file(GLOB_RECURSE EXTERNAL_HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR} REGULAR_EXPRESSION "external/*.*")
 
 
 
 
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
-add_executable(HuntWheel mainFromScratch.cpp ${CPP_FILES} ${HPP_FILES} ${EXTERNAL_HPP_FILES})
+add_executable(HuntWheel mainFromScratch.cpp ${CPP_FILES} ${HPP_FILES} ${EXTERNAL_HPP_FILES} ${EXTERNAL_CPP_FILES})
 if(MSVC)
     #add_definitions(-D_USE_MATH_DEFINES)
     add_definitions(-DNOMINMAX)
@@ -81,4 +81,4 @@ if(MSVC)
 	# set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
 endif()
 
-target_link_libraries(HuntWheel PRIVATE glfw ${VULKAN_LIB_LIST})
+target_link_libraries(HuntWheel PRIVATE glfw imgui::imgui ${VULKAN_LIB_LIST})

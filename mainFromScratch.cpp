@@ -1,6 +1,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -36,6 +38,22 @@ const uint32_t WIDTH = 1920;
 const uint32_t HEIGHT = 1080;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 static float t = 0;
+// #pragma region imgui
+// // Options and values to display/toggle from the UI
+// struct UISettings {
+// 	bool displayModels = true;
+// 	bool displayLogos = true;
+// 	bool displayBackground = true;
+// 	bool animateLight = false;
+// 	float lightSpeed = 0.25f;
+// 	std::array<float, 50> frameTimes{};
+// 	float frameTimeMin = 9999.0f, frameTimeMax = 0.0f;
+// 	float lightTimer = 0.0f;
+// } uiSettings;
+
+
+// #pragma region 
+
 
 struct Vertex {
     float3 pos;
@@ -121,6 +139,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     return VK_FALSE;
 }
 
+static void check_vk_result(VkResult err)
+{
+    if (err == 0)
+        return;
+    fprintf(stderr, "[vulkan] Error: VkResult = %d\n", err);
+    if (err < 0)
+        abort();
+}
+
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
     std::cout << filename << std::endl;
@@ -164,6 +191,7 @@ public:
     {
         initWindow();
         initVulkan();
+        initImGui();
         mainLoop();
         cleanup();
     }
@@ -208,24 +236,32 @@ private:
     std::vector<VkBuffer> m_uniformBuffers;
     std::vector<VkDeviceMemory> m_uniformBuffersMemory;
 
+    
+
     VkDescriptorSetLayout m_descriptorSetLayoutMatrices;
     VkDescriptorSetLayout m_descriptorSetLayoutTextures;
     VkPipelineLayout m_pipelineLayout;
     VkDescriptorPool m_descriptorPool;
+    VkDescriptorPool m_descriptorPoolImGui;
     std::vector<VkDescriptorSet> m_descriptorSets;
 
 
     VkRenderPass m_renderPass;
+    VkRenderPass m_renderPassImGui;
     VkPipeline m_graphicsPipeline;
     VkPipeline m_gltfPipeline;
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
+    std::vector<VkFramebuffer> m_imGuiFrameBuffers;
     VkCommandPool m_commandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
+    std::vector<VkCommandBuffer> m_imGuiCommandBuffers;
 
     std::vector<VkSemaphore> m_imageAvailableSemaphores;
     std::vector<VkSemaphore> m_renderFinishedSemaphores;
     std::vector<VkFence> m_inFlightFences;
     size_t m_currentFrame = 0;
+
+    ImGui_ImplVulkanH_Window m_mainWindowData;
 
     bool m_framebufferResized = false;
 #pragma endregion
@@ -390,6 +426,7 @@ private:
         {
             throw std::runtime_error("failed to create window surface");
         }
+        m_mainWindowData.Surface = m_surface;
     }
 
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
@@ -448,6 +485,8 @@ private:
         VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
         uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+        m_mainWindowData.SurfaceFormat = surfaceFormat;
+        m_mainWindowData.PresentMode = presentMode;
 
         if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) 
         {
@@ -602,10 +641,10 @@ private:
 
     void createLogicalDevice() 
     {
-        QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
+        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(m_physicalDevice);
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+        std::set<uint32_t> uniqueQueueFamilies = {queueFamilyIndices.graphicsFamily.value(), queueFamilyIndices.presentFamily.value()};
         
 
         float queuePriority = 1.0f;
@@ -627,7 +666,7 @@ private:
         createInfo.pQueueCreateInfos = queueCreateInfos.data();
         createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
         createInfo.pEnabledFeatures = &deviceFeatures;
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(queueCreateInfos.size());
         createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 
@@ -647,8 +686,9 @@ private:
             throw std::runtime_error("failed to create logical device!");
         }
 
-        vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
-        vkGetDeviceQueue(m_device, indices.presentFamily.value(),  0, &m_presentQueue);
+        vkGetDeviceQueue(m_device, queueFamilyIndices.graphicsFamily.value(), 0, &m_graphicsQueue);
+        vkGetDeviceQueue(m_device, queueFamilyIndices.presentFamily.value(),  0, &m_presentQueue);
+
 
 
     }
@@ -842,24 +882,155 @@ private:
         memcpy(data, &ubo, sizeof(ubo));
         vkUnmapMemory(m_device, m_uniformBuffersMemory[currentImage]);
     }
+
+    void generateCommandBuffer(uint32_t currentImage)
+    {
+        // clear command buffer
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        beginInfo.pInheritanceInfo = nullptr; // Optional
+
+        if (vkBeginCommandBuffer(m_commandBuffers[currentImage], &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("failed to begin recording command buffer!");
+        }
+
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = m_renderPass;
+        renderPassInfo.framebuffer = m_swapChainFramebuffers[currentImage];
+
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = m_swapChainExtent;
+
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+        clearValues[1].depthStencil = {1.0f, 0};
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
+
+        vkCmdBeginRenderPass(m_commandBuffers[currentImage], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(m_commandBuffers[currentImage], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+        VkBuffer vertexBuffers[] = {m_vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(m_commandBuffers[currentImage], 0, 1, vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(m_commandBuffers[currentImage], m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindDescriptorSets(m_commandBuffers[currentImage], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[currentImage], 0, nullptr);
+        // for (int j = 0;j <4;j++)
+        // {
+        //     float4x4 modelMatrix = Matrix::CreateTranslation(float3(0,j*0.5f,0));
+        //     vkCmdPushConstants(
+        //                     m_commandBuffers[i],
+        //                     m_pipelineLayout,
+        //                     VK_SHADER_STAGE_VERTEX_BIT,
+        //                     0,
+        //                     sizeof(float4x4),
+        //                     &modelMatrix);
+        //     vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        // }
+        float4x4 modelMatrix = Matrix::CreateScale(m_gltfModel->m_scale);
+        modelMatrix *= Matrix::CreateRotationY(t);
+        modelMatrix *= Matrix::CreateTranslation(float3(0,-2.0f,0));
+        vkCmdPushConstants(
+                            m_commandBuffers[currentImage],
+                            m_pipelineLayout,
+                            VK_SHADER_STAGE_VERTEX_BIT,
+                            0,
+                            sizeof(float4x4),
+                            &modelMatrix);
+        //vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+        m_gltfModel->Draw(m_commandBuffers[currentImage],m_pipelineLayout);
+        
+        
+        vkCmdEndRenderPass(m_commandBuffers[currentImage]);
+        if (vkEndCommandBuffer(m_commandBuffers[currentImage]) != VK_SUCCESS) 
+        {
+            throw std::runtime_error("failed to record command buffer!");
+        }
+    }
+
+    void generateImGuiCommandBuffer(uint32_t currentImage, ImDrawData* draw_data)
+    {
+        // clear command buffer
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        beginInfo.pInheritanceInfo = nullptr; // Optional
+
+        if (vkBeginCommandBuffer(m_imGuiCommandBuffers[currentImage], &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("failed to begin recording command buffer!");
+        }
+
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = m_renderPassImGui;
+        renderPassInfo.framebuffer = m_imGuiFrameBuffers[currentImage];
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = m_swapChainExtent;
+        // std::array<VkClearValue, 1> clearValues{};
+        // clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+        // renderPassInfo.clearValueCount = 1;
+        // renderPassInfo.pClearValues = clearValues.data();
+        vkCmdBeginRenderPass(m_imGuiCommandBuffers[currentImage], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        ImGui_ImplVulkan_RenderDrawData(draw_data, m_imGuiCommandBuffers[currentImage]);
+
+        vkCmdEndRenderPass(m_imGuiCommandBuffers[currentImage]);
+        if (vkEndCommandBuffer(m_imGuiCommandBuffers[currentImage]) != VK_SUCCESS) 
+        {
+            throw std::runtime_error("failed to record imgui command buffer!");
+        }
+
+    }
+
     void createDescriptorPool() 
     {
-        std::array<VkDescriptorPoolSize, 2> poolSizes{};
-        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[0].descriptorCount = static_cast<uint32_t>(m_swapChainImages.size());
-        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = static_cast<uint32_t>(m_gltfModel->m_images.size());
-
-        VkDescriptorPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-        poolInfo.pPoolSizes = poolSizes.data();
-        poolInfo.maxSets = static_cast<uint32_t>(m_swapChainImages.size()+(m_gltfModel->m_images.size()));
-        poolInfo.flags = 0;
-
-        if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) 
+        // descPool for renderer
         {
-            throw std::runtime_error("failed to create descriptor pool!");
+            std::array<VkDescriptorPoolSize, 2> poolSizes{};
+            poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            poolSizes[0].descriptorCount = static_cast<uint32_t>(m_swapChainImages.size());
+            poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            poolSizes[1].descriptorCount = static_cast<uint32_t>(m_gltfModel->m_images.size());
+
+            VkDescriptorPoolCreateInfo poolInfo{};
+            poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+            poolInfo.pPoolSizes = poolSizes.data();
+            poolInfo.maxSets = static_cast<uint32_t>(m_swapChainImages.size()+(m_gltfModel->m_images.size()));
+            poolInfo.flags = 0;
+
+            if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) 
+            {
+                throw std::runtime_error("failed to create descriptor pool!");
+            }
+        }
+        // descPool for imgui
+        {
+            VkDescriptorPoolSize pool_sizes[] =
+            {
+                { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+                { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+                { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+                { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+                { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+            };
+            VkDescriptorPoolCreateInfo pool_info = {};
+            pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+            pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
+            pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+            pool_info.pPoolSizes = pool_sizes;
+            auto err = vkCreateDescriptorPool(m_device, &pool_info, nullptr, &m_descriptorPoolImGui);
+            check_vk_result(err);
         }
         
     }
@@ -1158,7 +1329,8 @@ private:
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        //colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentDescription depthAttachment{};
         depthAttachment.format = findDepthFormat();
@@ -1211,32 +1383,99 @@ private:
         {
             throw std::runtime_error("failed to create render pass!");
         }
+
+        VkAttachmentDescription imGuiColorAttachment{};
+        imGuiColorAttachment.format = m_swapChainImageFormat;
+        imGuiColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        imGuiColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        imGuiColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        imGuiColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        imGuiColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        imGuiColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        //colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        imGuiColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentReference imGuiColorAttachmentRef{};
+        imGuiColorAttachmentRef.attachment = 0;
+        imGuiColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDependency imGuiDependency = {};
+        imGuiDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        imGuiDependency.dstSubpass = 0;
+        imGuiDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        imGuiDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        imGuiDependency.srcAccessMask = 0;  // or VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        imGuiDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        VkSubpassDescription imGuiSubpass{};
+        imGuiSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+        imGuiSubpass.colorAttachmentCount = 1; // I guess this is for mrt
+        imGuiSubpass.pColorAttachments = &imGuiColorAttachmentRef;
+
+        VkRenderPassCreateInfo imGuiPassInfo = {};
+        imGuiPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        imGuiPassInfo.attachmentCount = 1;
+        imGuiPassInfo.pAttachments = &imGuiColorAttachment;
+        imGuiPassInfo.subpassCount = 1;
+        imGuiPassInfo.pSubpasses = &imGuiSubpass;
+        imGuiPassInfo.dependencyCount = 1;
+        imGuiPassInfo.pDependencies = &imGuiDependency;
+        if (vkCreateRenderPass(m_device, &imGuiPassInfo, nullptr, &m_renderPassImGui) != VK_SUCCESS) {
+            throw std::runtime_error("Could not create Dear ImGui's render pass");
+        }
     }
 #pragma region 
 
 #pragma region framebuffer
     void createFramebuffers() 
     {
-        m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
-        for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
         {
-            std::array<VkImageView, 2> attachments = {
-                m_swapChainImageViews[i],
-                m_depthImageView
-            };
-
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = m_renderPass;
-            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebufferInfo.pAttachments = attachments.data();
-            framebufferInfo.width = m_swapChainExtent.width;
-            framebufferInfo.height = m_swapChainExtent.height;
-            framebufferInfo.layers = 1;
-
-            if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS) 
+            m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
+            for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
             {
-                throw std::runtime_error("failed to create framebuffer!");
+                std::array<VkImageView, 2> attachments = {
+                   m_swapChainImageViews[i],
+                    m_depthImageView
+                };
+
+                VkFramebufferCreateInfo framebufferInfo{};
+                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferInfo.renderPass = m_renderPass;
+                framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+                framebufferInfo.pAttachments = attachments.data();
+                framebufferInfo.width = m_swapChainExtent.width;
+                framebufferInfo.height = m_swapChainExtent.height;
+                framebufferInfo.layers = 1;
+
+                if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS) 
+                {
+                    throw std::runtime_error("failed to create framebuffer!");
+                }
+            }
+        }
+
+        {
+            m_imGuiFrameBuffers.resize(m_swapChainImageViews.size());
+            for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
+            {
+                std::array<VkImageView, 1> attachments = {
+                    m_swapChainImageViews[i],
+                };
+
+                VkFramebufferCreateInfo framebufferInfo{};
+                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferInfo.renderPass = m_renderPassImGui;
+                framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+                framebufferInfo.pAttachments = attachments.data();
+                framebufferInfo.width = m_swapChainExtent.width;
+                framebufferInfo.height = m_swapChainExtent.height;
+                framebufferInfo.layers = 1;
+
+                if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_imGuiFrameBuffers[i]) != VK_SUCCESS) 
+                {
+                    throw std::runtime_error("failed to create imgui framebuffer!");
+                }
             }
         }
     }
@@ -1249,7 +1488,7 @@ private:
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-        poolInfo.flags = 0; // Optional
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // Optional
 
         if (vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool) != VK_SUCCESS) 
         {
@@ -1263,6 +1502,7 @@ private:
     void createCommandBuffers() 
     {
         m_commandBuffers.resize(m_swapChainFramebuffers.size());
+        m_imGuiCommandBuffers.resize(m_swapChainFramebuffers.size());
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = m_commandPool;
@@ -1274,77 +1514,15 @@ private:
             throw std::runtime_error("failed to allocate command buffers");
         }
 
-        for (size_t i = 0; i < m_commandBuffers.size(); i++) {
-            VkCommandBufferBeginInfo beginInfo{};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = 0; // Optional
-            beginInfo.pInheritanceInfo = nullptr; // Optional
-
-            if (vkBeginCommandBuffer(m_commandBuffers[i], &beginInfo) != VK_SUCCESS) {
-                throw std::runtime_error("failed to begin recording command buffer!");
-            }
-
-            VkRenderPassBeginInfo renderPassInfo{};
-            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = m_renderPass;
-            renderPassInfo.framebuffer = m_swapChainFramebuffers[i];
-
-            renderPassInfo.renderArea.offset = {0, 0};
-            renderPassInfo.renderArea.extent = m_swapChainExtent;
-
-            std::array<VkClearValue, 2> clearValues{};
-            clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-            clearValues[1].depthStencil = {1.0f, 0};
-
-            renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-            renderPassInfo.pClearValues = clearValues.data();
-
-            vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
-            VkBuffer vertexBuffers[] = {m_vertexBuffer};
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(m_commandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descriptorSets[i], 0, nullptr);
-            // for (int j = 0;j <4;j++)
-            // {
-            //     float4x4 modelMatrix = Matrix::CreateTranslation(float3(0,j*0.5f,0));
-            //     vkCmdPushConstants(
-            //                     m_commandBuffers[i],
-            //                     m_pipelineLayout,
-            //                     VK_SHADER_STAGE_VERTEX_BIT,
-            //                     0,
-            //                     sizeof(float4x4),
-            //                     &modelMatrix);
-            //     vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-            // }
-            float4x4 modelMatrix = Matrix::CreateScale(m_gltfModel->m_scale);
-            modelMatrix *= Matrix::CreateRotationY(0.0f);
-            modelMatrix *= Matrix::CreateTranslation(float3(0,-2.0f,0));
-            vkCmdPushConstants(
-                                m_commandBuffers[i],
-                                m_pipelineLayout,
-                                VK_SHADER_STAGE_VERTEX_BIT,
-                                0,
-                                sizeof(float4x4),
-                                &modelMatrix);
-            //vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-
-            m_gltfModel->Draw(m_commandBuffers[i],m_pipelineLayout);
-            
-            
-            vkCmdEndRenderPass(m_commandBuffers[i]);
-            if (vkEndCommandBuffer(m_commandBuffers[i]) != VK_SUCCESS) 
-            {
-                throw std::runtime_error("failed to record command buffer!");
-            }
+        if (vkAllocateCommandBuffers(m_device, &allocInfo, m_imGuiCommandBuffers.data()) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to allocate command buffers");
         }
 
-        
     }
 #pragma endregion
 #pragma region draw
-    void drawFrame() 
+    void drawFrame(ImDrawData* imGuiDrawData) 
     {
         vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
         vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
@@ -1361,6 +1539,10 @@ private:
         }
 
         updateUniformBuffer(imageIndex);
+        generateCommandBuffer(imageIndex);
+        generateImGuiCommandBuffer(imageIndex, imGuiDrawData);
+
+        std::array<VkCommandBuffer, 2> commandBuffers = {m_commandBuffers[imageIndex], m_imGuiCommandBuffers[imageIndex]};
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -1369,8 +1551,8 @@ private:
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &m_commandBuffers[imageIndex];
+        submitInfo.commandBufferCount = 2;
+        submitInfo.pCommandBuffers = commandBuffers.data();
         VkSemaphore signalSemaphores[] = {m_renderFinishedSemaphores[m_currentFrame]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
@@ -1404,6 +1586,7 @@ private:
         m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
     }
+
 #pragma endregion
 
 #pragma region sync
@@ -1465,11 +1648,53 @@ private:
         
     }
 
+    void initImGui()
+    {
+        
+
+        // Setup Dear ImGui context
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+        // Setup Dear ImGui style
+        ImGui::StyleColorsDark();
+        //ImGui::StyleColorsClassic();
+
+
+        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(m_physicalDevice);
+        // Setup Platform/Renderer backends
+        ImGui_ImplGlfw_InitForVulkan(m_window, true);
+        ImGui_ImplVulkan_InitInfo init_info = {};
+        init_info.Instance = m_instance;
+        init_info.PhysicalDevice = m_physicalDevice;
+        init_info.Device = m_device;
+        init_info.QueueFamily = queueFamilyIndices.graphicsFamily.value();
+        init_info.Queue = m_graphicsQueue;
+        init_info.PipelineCache = VK_NULL_HANDLE;
+        init_info.DescriptorPool = m_descriptorPoolImGui;
+        init_info.Allocator = VK_NULL_HANDLE;
+        init_info.MinImageCount = 2;
+        init_info.ImageCount = m_swapChainFramebuffers.size();
+        init_info.CheckVkResultFn = check_vk_result;
+        
+        m_mainWindowData.RenderPass = m_renderPassImGui;
+        ImGui_ImplVulkan_Init(&init_info, m_mainWindowData.RenderPass);
+
+        VkCommandBuffer command_buffer = beginSingleTimeCommands();
+        ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+        endSingleTimeCommands(command_buffer);
+
+
+
+    }
+
     void cleanupSwapChain() 
     {
         for (size_t i = 0; i < m_swapChainFramebuffers.size(); i++) 
         {
             vkDestroyFramebuffer(m_device, m_swapChainFramebuffers[i], nullptr);
+            vkDestroyFramebuffer(m_device, m_imGuiFrameBuffers[i], nullptr);
             vkDestroyBuffer(m_device, m_uniformBuffers[i], nullptr);
             vkFreeMemory(m_device, m_uniformBuffersMemory[i], nullptr);
         }
@@ -1477,12 +1702,15 @@ private:
         vkDestroyImage(m_device, m_depthImage, nullptr);
         vkFreeMemory(m_device, m_depthImageMemory, nullptr);
 
+        vkDestroyDescriptorPool(m_device, m_descriptorPoolImGui, nullptr);
         vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
 
+        vkFreeCommandBuffers(m_device, m_commandPool, static_cast<uint32_t>(m_imGuiCommandBuffers.size()), m_imGuiCommandBuffers.data());
         vkFreeCommandBuffers(m_device, m_commandPool, static_cast<uint32_t>(m_commandBuffers.size()), m_commandBuffers.data());
 
         vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+        vkDestroyRenderPass(m_device, m_renderPassImGui, nullptr);
         vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 
         for (size_t i = 0; i < m_swapChainImageViews.size(); i++) 
@@ -1522,16 +1750,54 @@ private:
 
     void mainLoop()
     {
+        bool show_demo_window = true;
+            bool show_another_window = false;
+            ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
         while (!glfwWindowShouldClose(m_window)) 
         {
+            
             glfwPollEvents();
-            drawFrame();
+            ImGui_ImplVulkan_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+            if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+            {
+            static float f = 0.0f;
+            static int counter = 0;
+
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+        ImGui::Render();
+        ImDrawData* draw_data = ImGui::GetDrawData();
+            drawFrame(draw_data);
+            // 防止显卡啸叫
+            Sleep(10);// https://en.wikipedia.org/wiki/Electromagnetically_induced_acoustic_noise
         }
         vkDeviceWaitIdle(m_device);
     }
 
     void cleanup()
     {
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
         cleanupSwapChain();
 
         delete(m_gltfModel);
