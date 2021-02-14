@@ -19,6 +19,8 @@
 #include <optional>
 #include <chrono>
 
+#include <vfs.h>
+
 
 #include "SimpleMath.h"
 
@@ -28,6 +30,9 @@
 #include "textureManager.h"
 
 #include <gltf_loader.h>
+#include <skySystem.h>
+
+
 using namespace DirectX::SimpleMath;
 using float2 = DirectX::SimpleMath::Vector2;
 using float3 = DirectX::SimpleMath::Vector3;
@@ -969,10 +974,6 @@ private:
         renderPassInfo.framebuffer = m_imGuiFrameBuffers[currentImage];
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = m_swapChainExtent;
-        // std::array<VkClearValue, 1> clearValues{};
-        // clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
-        // renderPassInfo.clearValueCount = 1;
-        // renderPassInfo.pClearValues = clearValues.data();
         vkCmdBeginRenderPass(m_imGuiCommandBuffers[currentImage], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         ImGui_ImplVulkan_RenderDrawData(draw_data, m_imGuiCommandBuffers[currentImage]);
@@ -1838,10 +1839,27 @@ private:
 int main() 
 {
     std::cout<<"Start Engine"<<std::endl;
+    fs::path pathToShow = vfs::GetExecutablePath();
+    
+    std::cout 
+     << "root_name() = " << pathToShow.root_name() << "\n"
+     << "root_path() = " << pathToShow.root_path() << "\n"
+     << "relative_path() = " << pathToShow.relative_path() << "\n"
+     << "parent_path() = " << pathToShow.parent_path() << "\n"
+     << "filename() = " << pathToShow.filename() << "\n"
+     << "stem() = " << pathToShow.stem() << "\n"
+     << "extension() = " << pathToShow.extension() << "\n";
+
+    std::cout << "--------------------------------" << std::endl;
+    auto resPath = vfs::GetResPath();
+    std::cout <<  resPath.relative_path() << std::endl;
+    std::cout << "--------------------------------" << std::endl;
+    auto rootPath = vfs::GetRootPath();
+    std::cout <<  rootPath.relative_path() << std::endl;
     VulkanRendererApp app;
     try
     {
-        app.run();
+        //app.run();
     }
     catch(const std::exception& e)
     {

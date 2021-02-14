@@ -36,6 +36,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(glfw3 3.3.2 CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
+find_package(tinyobjloader CONFIG REQUIRED)
 
 # vulkan-1 library for build Vulkan application.
 set(VULKAN_LIB_LIST "vulkan-1")
@@ -81,4 +82,4 @@ if(MSVC)
 	# set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
 endif()
 
-target_link_libraries(HuntWheel PRIVATE glfw imgui::imgui ${VULKAN_LIB_LIST})
+target_link_libraries(HuntWheel PRIVATE glfw imgui::imgui tinyobjloader::tinyobjloader ${VULKAN_LIB_LIST})
