@@ -19,7 +19,7 @@
 #include <optional>
 #include <chrono>
 
-#include <vfs.h>
+#include <Vfs.h>
 
 
 #include "SimpleMath.h"
@@ -27,10 +27,11 @@
 #include <TFVulkanDevice.h>
 #include <VulkanBufferHelper.h>
 #include <TFVulkanDevice.h>
-#include "textureManager.h"
+#include "TextureManager.h"
 
-#include <gltf_loader.h>
-#include <skySystem.h>
+#include <GltfLoader.h>
+#include <SkySystem.h>
+#include <ObjModel.h>
 
 
 using namespace DirectX::SimpleMath;
@@ -1838,28 +1839,14 @@ private:
 
 int main() 
 {
-    std::cout<<"Start Engine"<<std::endl;
-    fs::path pathToShow = vfs::GetExecutablePath();
-    
-    std::cout 
-     << "root_name() = " << pathToShow.root_name() << "\n"
-     << "root_path() = " << pathToShow.root_path() << "\n"
-     << "relative_path() = " << pathToShow.relative_path() << "\n"
-     << "parent_path() = " << pathToShow.parent_path() << "\n"
-     << "filename() = " << pathToShow.filename() << "\n"
-     << "stem() = " << pathToShow.stem() << "\n"
-     << "extension() = " << pathToShow.extension() << "\n";
-
-    std::cout << "--------------------------------" << std::endl;
-    auto resPath = vfs::GetResPath();
-    std::cout <<  resPath.relative_path() << std::endl;
-    std::cout << "--------------------------------" << std::endl;
-    auto rootPath = vfs::GetRootPath();
-    std::cout <<  rootPath.relative_path() << std::endl;
+    // std::cout<<"Start Engine"<<std::endl;
+    // fs::path resPath = Vfs::GetResPath();
+    // resPath += "\\model\\sphere\\sphere.obj";
+    // ObjModel a = ObjModel(resPath);
     VulkanRendererApp app;
     try
     {
-        //app.run();
+        app.run();
     }
     catch(const std::exception& e)
     {

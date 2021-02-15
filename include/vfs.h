@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include <filesystem> 
 #include <optional>
@@ -11,7 +12,7 @@ const std::string SEP = "/";
 const std::string UP_DIR = "..";
 const std::string CURRENT_DIR = ".";
 
-class vfs
+class Vfs
 {
 public:
     static fs::path GetRootPath();

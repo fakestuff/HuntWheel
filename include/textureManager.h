@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
-#include "texture.h"
+#include "Texture.h"
 namespace TF
 {
 class TextureManager

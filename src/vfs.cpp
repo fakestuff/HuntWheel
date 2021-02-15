@@ -1,5 +1,4 @@
-#pragma once
-#include <vfs.h>
+#include <Vfs.h>
 #include <iostream>
 
 void AppendPath(fs::path srcPath, fs::path && appendingPath)
@@ -14,33 +13,33 @@ void AppendPath(fs::path srcPath, std::string && appendingPath)
 
 }
 
-fs::path vfs::GetRootPath()
+fs::path Vfs::GetRootPath()
 {
     static std::optional<fs::path> configPath = SearchFolderInCurPathAndNestedParents(fs::current_path(),std::string("toyEngineConfig"));
 
     return configPath.value().parent_path();
 }
 
-fs::path vfs::GetResPath()
+fs::path Vfs::GetResPath()
 {
     static std::optional<fs::path> rootPath = SearchFolderInCurPathAndNestedParents(fs::current_path(),std::string("res"));
     return rootPath.value();
 }
 
-fs::path vfs::GetExecutablePath()
+fs::path Vfs::GetExecutablePath()
 {
     auto workingDirectory = fs::current_path();
     AppendPath(workingDirectory, std::string("HuntWheel.exe"));
     return workingDirectory;
 }
 
-fs::path vfs::GetWorkingDirectoryPath()
+fs::path Vfs::GetWorkingDirectoryPath()
 {
     static fs::path workingDirPath = fs::current_path();
     return workingDirPath;
 }
 
-std::optional<fs::path> vfs::SearchFolderInCurPathAndNestedParents(fs::path curPath,std::string folder)
+std::optional<fs::path> Vfs::SearchFolderInCurPathAndNestedParents(fs::path curPath,std::string folder)
 {
     auto searchingPath = curPath;
     do 

@@ -1,2 +1,1 @@
-#pragma once
-#include <skySystem.h>
+#include <SkySystem.h>

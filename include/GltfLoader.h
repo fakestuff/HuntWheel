@@ -8,7 +8,7 @@
 #include "SimpleMath.h"
 #include "tiny_gltf.h"
 #include <TFVulkanDevice.h>
-#include <texture.h>
+#include <Texture.h>
 using namespace DirectX::SimpleMath;
 using float2 = DirectX::SimpleMath::Vector2;
 using float3 = DirectX::SimpleMath::Vector3;

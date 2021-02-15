@@ -9,7 +9,7 @@
 // #define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
 //#include <rapidjson
 #include <iostream>
-#include <gltf_loader.h>
+#include <GltfLoader.h>
 #include <VulkanHelper.h>
 #include <VulkanBufferHelper.h>
 using namespace tinygltf;
