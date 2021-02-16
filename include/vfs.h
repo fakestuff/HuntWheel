@@ -17,7 +17,9 @@ class Vfs
 public:
     static fs::path GetRootPath();
     static fs::path GetResPath();
+    static fs::path GetShaderPath();
     static fs::path GetWorkingDirectoryPath();
     static fs::path GetExecutablePath();
     static std::optional<fs::path> SearchFolderInCurPathAndNestedParents(fs::path curPath,std::string folder);
+    static fs::path ConcatPath(fs::path pathA, std::string pathB);
 };

@@ -27,6 +27,7 @@ public:
     };
     
     ObjModel(fs::path objPath, TF::TFVulkanDevice tfVulkanDevice);
+    void CleanUp();
     std::string name;
     std::vector<Vertex> m_vertexBuffer;
     TF::TFVulkanDevice m_vulkanDevice;

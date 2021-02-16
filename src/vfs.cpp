@@ -1,16 +1,23 @@
 #include <Vfs.h>
 #include <iostream>
 
-void AppendPath(fs::path srcPath, fs::path && appendingPath)
+void AppendPath(fs::path & srcPath, fs::path && appendingPath)
 {
     srcPath += SEP;
     srcPath += appendingPath;
 }
 
-void AppendPath(fs::path srcPath, std::string && appendingPath)
+void AppendPath(fs::path & srcPath, std::string && appendingPath)
 {
     AppendPath(srcPath, fs::path(appendingPath));
 
+}
+
+fs::path Vfs::ConcatPath(fs::path pathA, std::string pathB)
+{
+    auto pathCopy = pathA;
+    AppendPath(pathCopy, pathB);
+    return pathCopy;
 }
 
 fs::path Vfs::GetRootPath()
@@ -23,6 +30,12 @@ fs::path Vfs::GetRootPath()
 fs::path Vfs::GetResPath()
 {
     static std::optional<fs::path> rootPath = SearchFolderInCurPathAndNestedParents(fs::current_path(),std::string("res"));
+    return rootPath.value();
+}
+
+fs::path Vfs::GetShaderPath()
+{
+    static std::optional<fs::path> rootPath = SearchFolderInCurPathAndNestedParents(fs::current_path(),std::string("shaders"));
     return rootPath.value();
 }
 

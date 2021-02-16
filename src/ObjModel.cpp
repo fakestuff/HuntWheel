@@ -103,3 +103,10 @@ ObjModel::ObjModel(fs::path objPath,TF::TFVulkanDevice tfVulkanDevice)
     vkDestroyBuffer(m_vulkanDevice.logicalDevice, vertexStaging.buffer, nullptr);
     vkFreeMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory, nullptr);
 }
+
+void ObjModel::CleanUp()
+{
+    vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.buffer, nullptr);
+    vkFreeMemory(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.memory, nullptr);
+
+}
