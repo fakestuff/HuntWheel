@@ -29,7 +29,7 @@ void SkySystem::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLay
     VkDeviceSize offsets[] = {0};
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_skyRenderingPipeline);
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    float4x4 modelMatrix = Matrix::CreateScale(1000.0f);
+    float4x4 modelMatrix = Matrix::CreateScale(5000.0f);
         vkCmdPushConstants(
                             commandBuffer,
                             pipelineLayout,

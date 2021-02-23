@@ -33,6 +33,7 @@
 
 #include <GltfLoader.h>
 #include <SkySystem.h>
+#include <TerrainSystem.h>
 #include <ObjModel.h>
 
 
@@ -62,6 +63,8 @@ struct CameraUniformBufferObject
 {
     float4x4 view;
     float4x4 proj;
+    float4x4 invVPF; // inverse view projection framebuffer;
+    float4 cameraPos;
 };
 
 const std::vector<const char*> validationLayers = {
@@ -128,6 +131,7 @@ public:
         initWindow();
         initVulkan();
         initImGui();
+        m_terrainSystem.Init(m_tfDevice, m_renderPass, m_swapChainExtent, m_pipelineLayout);
         m_skySystem.Init(m_tfDevice, m_renderPass, m_swapChainExtent, m_pipelineLayout);
         mainLoop();
         cleanup();
@@ -137,6 +141,7 @@ private:
     GLFWwindow* m_window = nullptr;
 
     SkySystem m_skySystem;
+    TerrainSystem m_terrainSystem;
 
     TF::TFVulkanDevice m_tfDevice;
     VkInstance m_instance;
@@ -751,7 +756,7 @@ private:
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
         std::array<VkDescriptorSetLayoutBinding,3> samplerLayoutBinding{};
@@ -809,12 +814,25 @@ private:
         CameraUniformBufferObject ubo{};
         
         //ubo.model = Matrix::CreateRotationY(time);//.Transpose();
-        ubo.view = XMMatrixLookAtLH(float3(2,2,2), float3(0,0,0), float3(0,1,0));
+        float4 cameraPos = float4(0,300,-1000,0);
+        ubo.view = XMMatrixLookAtLH(cameraPos, float3(0,0,0), float3(0,1,0));
         //ubo.view = ubo.view;//.Transpose();
-        ubo.proj = DirectX::XMMatrixPerspectiveFovLH(3.14f / 2.0f, m_swapChainExtent.width / (float) m_swapChainExtent.height, 0.01f, 1000.0f);
+        ubo.proj = DirectX::XMMatrixPerspectiveFovLH(3.14f / 2.0f, m_swapChainExtent.width / (float) m_swapChainExtent.height, 1.0f, 10000.0f);
         ubo.proj._22 *= -1;
         //ubo.proj = ubo.proj.Transpose();
 
+        float w = m_swapChainExtent.width;
+        float h = m_swapChainExtent.height;
+        float4x4 clipToFrameBuffer =
+        float4x4(
+            float4(w,0,0,w*0.5f),
+            float4(0,h,0,h*0.5f),
+            float4(0,0,0,0),
+            float4(0,0,0,0)
+        );
+        
+        ubo.invVPF = (ubo.view * ubo.proj * clipToFrameBuffer).Invert();
+        ubo.cameraPos = cameraPos;
         void* data;
         vkMapMemory(m_device, m_uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
         memcpy(data, &ubo, sizeof(ubo));
@@ -880,6 +898,7 @@ private:
         //vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         m_gltfModel->Draw(m_commandBuffers[currentImage],m_pipelineLayout);
+        m_terrainSystem.Draw(m_commandBuffers[currentImage],m_pipelineLayout);
         m_skySystem.Draw(m_commandBuffers[currentImage],m_pipelineLayout);
         
         
@@ -1582,6 +1601,7 @@ private:
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
+        m_terrainSystem.CleanUp();
         m_skySystem.CleanUp();
         cleanupSwapChain();
 

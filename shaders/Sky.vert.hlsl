@@ -9,6 +9,7 @@ struct VSInput
 struct VSOutput
 {
     float4 Pos : SV_POSITION;
+    float4 WorldPos : TEXCOORD0;
 };
 
 struct PushConsts
@@ -21,6 +22,8 @@ struct UBO
 {
 	row_major float4x4 view;
 	row_major float4x4 proj;
+    row_major float4x4 invVPF;
+    float4 cameraPos;
 };
 cbuffer ubo : register(b0) { UBO ubo; }
 VSOutput main(VSInput input)
@@ -28,5 +31,6 @@ VSOutput main(VSInput input)
 	VSOutput output = (VSOutput)0;
     float4 pos =  mul(mul(mul(float4(input.Pos.xyz, 1.0), pushConsts.model),ubo.view),ubo.proj); // row major
     output.Pos =  pos;
+    output.WorldPos = mul(float4(input.Pos.xyz, 1.0), pushConsts.model);
 	return output;
 }
