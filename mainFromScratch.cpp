@@ -131,7 +131,7 @@ public:
         initWindow();
         initVulkan();
         initImGui();
-        m_terrainSystem.Init(m_tfDevice, m_renderPass, m_swapChainExtent, m_pipelineLayout);
+        m_terrainSystem.Init(m_tfDevice, m_descriptorPool,m_renderPass, m_swapChainExtent, m_pipelineLayout, m_descriptorSetLayoutTextures);
         m_skySystem.Init(m_tfDevice, m_renderPass, m_swapChainExtent, m_pipelineLayout);
         mainLoop();
         cleanup();
@@ -953,7 +953,7 @@ private:
             poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
             poolInfo.pPoolSizes = poolSizes.data();
-            poolInfo.maxSets = static_cast<uint32_t>(m_swapChainImages.size()+(m_gltfModel->m_images.size()));
+            poolInfo.maxSets = static_cast<uint32_t>(1024);
             poolInfo.flags = 0;
 
             if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) 
