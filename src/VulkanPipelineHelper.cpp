@@ -54,9 +54,9 @@ VkPipeline CreateGraphicsPipeline(VkDevice logicalDevice, VkPipelineLayout pipel
 
     VkViewport viewport{};
     viewport.x = 0.0f;
-    viewport.y = 0.0f;
+    viewport.y = pipelineParameter.RtSize.height;
     viewport.width = (float) pipelineParameter.RtSize.width;
-    viewport.height = (float) pipelineParameter.RtSize.height;
+    viewport.height = -(float) pipelineParameter.RtSize.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 

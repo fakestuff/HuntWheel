@@ -206,6 +206,10 @@ private:
 
     ImGui_ImplVulkanH_Window m_mainWindowData;
 
+    float m_cameraAngle = 90;
+    float m_cameraDistance = 500;
+
+
     bool m_framebufferResized = false;
 #pragma endregion
 
@@ -814,11 +818,11 @@ private:
         CameraUniformBufferObject ubo{};
         
         //ubo.model = Matrix::CreateRotationY(time);//.Transpose();
-        float4 cameraPos = float4(0,1000,-200,0);
+        float cameraAngleRad = m_cameraAngle / 180.0 * 3.1415926;
+        float4 cameraPos = float4(0,sin(cameraAngleRad)*m_cameraDistance,cos(cameraAngleRad)*m_cameraDistance,0);
         ubo.view = XMMatrixLookAtLH(cameraPos, float3(0,0,0), float3(0,1,0));
         //ubo.view = ubo.view;//.Transpose();
         ubo.proj = DirectX::XMMatrixPerspectiveFovLH(3.14f / 2.0f, m_swapChainExtent.width / (float) m_swapChainExtent.height, 1.0f, 10000.0f);
-        ubo.proj._22 *= -1;
         //ubo.proj = ubo.proj.Transpose();
 
         float w = m_swapChainExtent.width;
@@ -1575,7 +1579,8 @@ private:
             ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);
-
+            ImGui::SliderFloat("CameraAngle", &m_cameraAngle, 0.0f, 90.0f);
+            ImGui::SliderFloat("CameraDistance", &m_cameraDistance, 0.0f, 1000.0f);
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
