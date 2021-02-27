@@ -72,13 +72,22 @@ namespace TF // TF stand for touch fish :)
         TextureUsage m_usage;
         void UpdateDescriptor();
         void Destroy();
+        void FromFile(
+            const std::string&  path,
+            TFVulkanDevice*     device, 
+            VkQueue             copyQueue, 
+            VkFilter            filter, 
+            VkImageUsageFlags   imageUsageFlags, 
+            VkImageLayout       imageLayout, 
+            TextureUsage        usage);
+
         void FromBuffer(
-            void *              buffer,
+            void*               buffer,
             VkDeviceSize        buffersize,
             VkFormat            format,
             uint32_t            texWidth,
             uint32_t            texHeight,
-            TFVulkanDevice     *device,
+            TFVulkanDevice*     device,
             VkQueue             copyQueue,
             VkFilter            filter          = VK_FILTER_LINEAR,
             VkImageUsageFlags   imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,

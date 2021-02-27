@@ -24,8 +24,9 @@ void TerrainSystem::Init(TF::TFVulkanDevice tfVulkanDevice, VkDescriptorPool des
     p = Vfs::GetResPath();
     p.append("model");p.append("Terrain");p.append("sampleTerrainColor.png");
     m_baseMap.FromFile(p.generic_string(), &m_vulkanDevice, m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,TF::TextureUsage::Albedo);
-
-
+    p = Vfs::GetResPath();
+    p.append("model");p.append("Terrain");p.append("sampleTerrainNormal.png");
+    m_normalMap.FromFile(p.generic_string(), &m_vulkanDevice, m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,TF::TextureUsage::Normal);
     {
         VkDescriptorSetAllocateInfo samplerAllocInfo{};
         samplerAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -36,6 +37,7 @@ void TerrainSystem::Init(TF::TFVulkanDevice tfVulkanDevice, VkDescriptorPool des
         std::vector<VkWriteDescriptorSet> writeDescriptorSets = 
         {
             WriteDescriptorSet(m_descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &m_baseMap.m_descriptor),
+            WriteDescriptorSet(m_descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, &m_normalMap.m_descriptor),
         };
         vkUpdateDescriptorSets(m_vulkanDevice.logicalDevice, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 

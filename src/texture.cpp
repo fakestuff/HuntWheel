@@ -70,6 +70,12 @@ namespace TF
         m_width = texWidth;
         m_height = texHeight;
         m_mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+
+        VkFormat imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+        if (usage != TextureUsage::Albedo)
+        {
+            imageFormat = VK_FORMAT_R8G8B8A8_UNORM;
+        }
         CreateBuffer(m_device->physicsDevice,m_device->logicalDevice,imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         stagingBuffer, stagingBufferMemory);
         void* data;
@@ -77,18 +83,19 @@ namespace TF
         memcpy(data, texSharedPtr->Pixels.data(), static_cast<size_t>(imageSize));
         vkUnmapMemory(m_device->logicalDevice, stagingBufferMemory);
 
-        CreateImage(m_device->physicsDevice, m_device->logicalDevice, texWidth, texHeight, m_mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_image, m_deviceMemory);
+        CreateImage(m_device->physicsDevice, m_device->logicalDevice, texWidth, texHeight, m_mipLevels, imageFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_image, m_deviceMemory);
         
-        TransitionImageLayout(m_device->logicalDevice,m_device->graphicsQueue,m_device->cmdPool, m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,m_mipLevels);
+        TransitionImageLayout(m_device->logicalDevice,m_device->graphicsQueue,m_device->cmdPool, m_image, imageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,m_mipLevels);
         CopyBufferToImage(m_device->logicalDevice,m_device->graphicsQueue,m_device->cmdPool,stagingBuffer, m_image, texWidth, texHeight);
         
         //transitionImageLayout(m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,m_mipLevels);
-        GenerateMipmaps(m_device->physicsDevice, m_device->logicalDevice, m_device->graphicsQueue, m_device->cmdPool, m_image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_mipLevels);
+        GenerateMipmaps(m_device->physicsDevice, m_device->logicalDevice, m_device->graphicsQueue, m_device->cmdPool, m_image, imageFormat, texWidth, texHeight, m_mipLevels);
         vkDestroyBuffer(m_device->logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(m_device->logicalDevice, stagingBufferMemory, nullptr);
 
         m_sampler = CreateTextureSampler( m_device->physicsDevice, m_device->logicalDevice, m_mipLevels);
-		m_view = CreateImageView(m_device->logicalDevice, m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, m_mipLevels);
+        
+		m_view = CreateImageView(m_device->logicalDevice, m_image, imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, m_mipLevels);
 
 		// // Update descriptor image info member that can be used for setting up descriptor sets
 		UpdateDescriptor();
@@ -124,9 +131,13 @@ namespace TF
         GenerateMipmaps(m_device->physicsDevice, m_device->logicalDevice, m_device->graphicsQueue, m_device->cmdPool, m_image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, m_mipLevels);
         vkDestroyBuffer(m_device->logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(m_device->logicalDevice, stagingBufferMemory, nullptr);
-
+        VkFormat imageViewType = VK_FORMAT_R8G8B8A8_SRGB;
+        if (usage != TextureUsage::Albedo)
+        {
+            imageViewType = VK_FORMAT_R8G8B8A8_UNORM;
+        }
         m_sampler = CreateTextureSampler( m_device->physicsDevice, m_device->logicalDevice, m_mipLevels);
-		m_view = CreateImageView(m_device->logicalDevice, m_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, m_mipLevels);
+		m_view = CreateImageView(m_device->logicalDevice, m_image, imageViewType, VK_IMAGE_ASPECT_COLOR_BIT, m_mipLevels);
 
 		// // Update descriptor image info member that can be used for setting up descriptor sets
 		UpdateDescriptor();
