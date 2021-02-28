@@ -65,6 +65,7 @@ struct CameraUniformBufferObject
     float4x4 proj;
     float4x4 invVPF; // inverse view projection framebuffer;
     float4 cameraPos;
+    float4 lightDir;
 };
 
 const std::vector<const char*> validationLayers = {
@@ -206,8 +207,10 @@ private:
 
     ImGui_ImplVulkanH_Window m_mainWindowData;
 
-    float m_cameraAngle = 90;
-    float m_cameraDistance = 500;
+    float m_cameraAngle = 89;
+    float m_cameraDistance = 800;
+    float m_cameraOffsetX = 0;
+    float3 m_lightDir{0,1,0};
 
 
     bool m_framebufferResized = false;
@@ -380,7 +383,7 @@ private:
     {
         for (const auto& availableFormat :availableFormats)
         {
-            if (availableFormat.format == VK_FORMAT_B8G8R8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
             {
                 return availableFormat;
             }
@@ -819,11 +822,15 @@ private:
         
         //ubo.model = Matrix::CreateRotationY(time);//.Transpose();
         float cameraAngleRad = m_cameraAngle / 180.0 * 3.1415926;
-        float4 cameraPos = float4(0,sin(cameraAngleRad)*m_cameraDistance,cos(cameraAngleRad)*m_cameraDistance,0);
+        float4 cameraPos = float4(m_cameraOffsetX,sin(cameraAngleRad)*m_cameraDistance,-cos(cameraAngleRad)*m_cameraDistance,0);
+        
         ubo.view = XMMatrixLookAtLH(cameraPos, float3(0,0,0), float3(0,1,0));
         //ubo.view = ubo.view;//.Transpose();
         ubo.proj = DirectX::XMMatrixPerspectiveFovLH(3.14f / 2.0f, m_swapChainExtent.width / (float) m_swapChainExtent.height, 1.0f, 10000.0f);
         //ubo.proj = ubo.proj.Transpose();
+        float3 unitLightDir = m_lightDir;
+        unitLightDir.Normalize();
+        ubo.lightDir = float4(unitLightDir.x,unitLightDir.y,unitLightDir.z,1);
 
         float w = m_swapChainExtent.width;
         float h = m_swapChainExtent.height;
@@ -1579,11 +1586,14 @@ private:
             ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);
-            ImGui::SliderFloat("CameraAngle", &m_cameraAngle, 0.0f, 90.0f);
+            ImGui::SliderFloat("CameraAngle", &m_cameraAngle, 0.0f, 89.0f);
             ImGui::SliderFloat("CameraDistance", &m_cameraDistance, 0.0f, 1000.0f);
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::SliderFloat("CameraOffsetX",&m_cameraOffsetX,-100,100);
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
+            ImGui::SliderFloat("light_x", &m_lightDir.x, -1.0f, 1.0f);
+            ImGui::SliderFloat("light_y", &m_lightDir.y, -1.0f, 1.0f);
+            ImGui::SliderFloat("light_z", &m_lightDir.z, -1.0f, 1.0f);
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
                 counter++;
             ImGui::SameLine();
