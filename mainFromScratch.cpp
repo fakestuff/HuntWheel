@@ -66,6 +66,7 @@ struct CameraUniformBufferObject
     float4x4 invVPF; // inverse view projection framebuffer;
     float4 cameraPos;
     float4 lightDir;
+    float4 lightColor;
 };
 
 const std::vector<const char*> validationLayers = {
@@ -211,6 +212,8 @@ private:
     float m_cameraDistance = 800;
     float m_cameraOffsetX = 0;
     float3 m_lightDir{0,1,0};
+    float3 m_lightColor{1,1,1};
+    float m_lightIntensity = 1.0f;
 
 
     bool m_framebufferResized = false;
@@ -831,6 +834,7 @@ private:
         float3 unitLightDir = m_lightDir;
         unitLightDir.Normalize();
         ubo.lightDir = float4(unitLightDir.x,unitLightDir.y,unitLightDir.z,1);
+        ubo.lightColor = float4(m_lightColor.x*m_lightIntensity, m_lightColor.y*m_lightIntensity, m_lightColor.z*m_lightIntensity, m_lightIntensity);
 
         float w = m_swapChainExtent.width;
         float h = m_swapChainExtent.height;
@@ -1588,9 +1592,10 @@ private:
             ImGui::Checkbox("Another Window", &show_another_window);
             ImGui::SliderFloat("CameraAngle", &m_cameraAngle, 0.0f, 89.0f);
             ImGui::SliderFloat("CameraDistance", &m_cameraDistance, 0.0f, 1000.0f);
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            
             ImGui::SliderFloat("CameraOffsetX",&m_cameraOffsetX,-100,100);
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+            ImGui::SliderFloat("light intensity", &m_lightIntensity, 0.0f, 100.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("light color", (float*)&m_lightColor); // Edit 3 floats representing a color
             ImGui::SliderFloat("light_x", &m_lightDir.x, -1.0f, 1.0f);
             ImGui::SliderFloat("light_y", &m_lightDir.y, -1.0f, 1.0f);
             ImGui::SliderFloat("light_z", &m_lightDir.z, -1.0f, 1.0f);

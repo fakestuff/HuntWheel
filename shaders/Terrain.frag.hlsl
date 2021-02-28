@@ -150,9 +150,9 @@ float4 main(VSOutput input) : SV_TARGET
   float3 albedo = sqrt(textureColorMap.Sample(samplerColorMap, input.UV).rgb);
   float4 metallicRoughness = texturePbrMap.Sample(samplerPbrMap, input.UV);
   BxdfData bxdfData;
-  PrepareBxdfData(bxdfData, albedo, 0, 0.95, L, V, N);
+  PrepareBxdfData(bxdfData, albedo, 0, 0.5, L, V, N);
 
-  float3 lightColor = float3(1,0.956,0.839)*3.14;
+  float3 lightColor = PerframeUbo.lightColor.xyz*3.14;
 
   float3 diffuse = bxdfData.NoL * albedo / PI;
   float3 spec = SPEC_GGX(bxdfData) * bxdfData.NoL;
