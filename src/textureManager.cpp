@@ -31,7 +31,6 @@ std::shared_ptr<Texture> TextureManager::LoadTexture(const std::string path)
     if (!pixels) {
         throw std::runtime_error("failed to load texture image!");
     }
-    
     m_texturePool[path] = std::make_shared<Texture>(texWidth, texHeight, CPUTextureFormat::R8G8B8A8, pixels);
     stbi_image_free(pixels);
     return m_texturePool[path];

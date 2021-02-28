@@ -1,3 +1,4 @@
+#include "Common.hlsl"
 struct VSOutput
 {
     float4 Pos : SV_POSITION;
@@ -5,17 +6,8 @@ struct VSOutput
     
 };
 
-struct UBO
-{
-	row_major float4x4 view;
-	row_major float4x4 proj;
-    row_major float4x4 invVPF;
-    float4 cameraPos;
-};
-cbuffer ubo : register(b0) { UBO ubo; }
-
 float4 main(VSOutput input) : SV_TARGET
 {
-    float3 viewDir = normalize(input.WorldPos.xyz - ubo.cameraPos.xyz);
+    float3 viewDir = normalize(input.WorldPos.xyz - PerframeUbo.cameraPos.xyz);
     return float4(viewDir, 1);
 }

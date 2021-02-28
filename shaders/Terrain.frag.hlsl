@@ -1,3 +1,4 @@
+#include "Common.hlsl"
 Texture2D textureColorMap : register(t0,space1);
 SamplerState samplerColorMap : register(s0,space1);
 Texture2D textureNormalMap : register(t1,space1);
@@ -12,22 +13,15 @@ struct VSOutput
     float4 WorldPos : TEXCOORD01;
 };
 
-struct UBO
-{
-	row_major float4x4 view;
-	row_major float4x4 proj;
-  row_major float4x4 invVPF;
-  float4 cameraPos;
-};
-cbuffer ubo : register(b0) { UBO ubo; }
 
 
-#define PI 3.1415926
+
+
 
 struct BxdfData
 {
   float3 Albedo;
-  float3 Spec;
+  float Metallic;
   float Roughness;
   float3 N;
   float3 L;
@@ -36,8 +30,8 @@ struct BxdfData
   float NoL;
   float NoH;
   float NoV;
-  float LoH;
   float VoH;
+  float VoL;
 };
 
 // Spec GGX
@@ -50,6 +44,13 @@ float D_GGX( float Roughness, float NoH )
 	return a2 / ( PI*d*d );					// 4 mul, 1 rcp
 }
 
+float Vis_SmithJointApprox( float a, float NoV, float NoL )
+{
+	float Vis_SmithV = NoL * ( NoV * ( 1 - a ) + a );
+	float Vis_SmithL = NoV * ( NoL * ( 1 - a ) + a );
+	return 0.5 * rcp( Vis_SmithV + Vis_SmithL );
+}
+
 float Vis_Schlick( float Roughness, float NoV, float NoL )
 {
 	float k = Roughness * Roughness * 0.5;
@@ -58,21 +59,30 @@ float Vis_Schlick( float Roughness, float NoV, float NoL )
 	return 0.25 / ( Vis_SchlickV * Vis_SchlickL );
 }
 
-float Pow2(float x)
+float DielectricSpecularToF0(float Specular)
 {
-  return x*x;
+	return 0.08f * Specular;
 }
 
-float Pow4(float x)
+// [Burley, "Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering"]
+float DielectricF0ToIor(float F0)
 {
-  float x2 = Pow2(x);
-  return x2 * x2;
+	return 2.0f / (1.0f - sqrt(F0)) - 1.0f;
 }
 
-float Pow5(float x)
+float DielectricIorToF0(float Ior)
 {
-  return Pow4(x) * x;
+	const float F0Sqrt = (Ior-1)/(Ior+1);
+	const float F0 = F0Sqrt*F0Sqrt;
+	return F0;
 }
+
+float3 ComputeF0(float Specular, float3 BaseColor, float Metallic)
+{
+	return lerp(DielectricSpecularToF0(Specular).xxx, BaseColor, Metallic.xxx);
+}
+
+
 
 float3 F_Schlick( float3 SpecularColor, float VoH )
 {
@@ -83,51 +93,68 @@ float3 F_Schlick( float3 SpecularColor, float VoH )
 	return saturate( 50.0 * SpecularColor.g ) * Fc + (1 - Fc) * SpecularColor;
 }
 
-float3 PBR_SPEC(BxdfData bxdfData)
+// float3 F_Fresnel( float3 SpecularColor, float VoH )
+// {
+// 	float3 SpecularColorSqrt = sqrt( clamp( float3(0, 0, 0), float3(0.99, 0.99, 0.99), SpecularColor ) );
+// 	float3 n = ( 1 + SpecularColorSqrt ) / ( 1 - SpecularColorSqrt );
+// 	float3 g = sqrt( n*n + VoH*VoH - 1 );
+// 	return 0.5 * Square( (g - VoH) / (g + VoH) ) * ( 1 + Square( ((g+VoH)*VoH - 1) / ((g-VoH)*VoH + 1) ) );
+// }
+
+float3 SPEC_GGX(BxdfData bxdfData)
 {
-    return F_Schlick(bxdfData.Spec, bxdfData.VoH) 
-    * D_GGX(bxdfData.Roughness, bxdfData.NoH) 
-    * Vis_Schlick(bxdfData.Roughness, bxdfData.NoV, bxdfData.NoL) 
-    / (4 * bxdfData.NoL * bxdfData.NoV);
+  float spec = 0.04;
+  if (bxdfData.Metallic != 0)
+  {
+    spec = 1;
+  }
+  float a = bxdfData.Roughness*bxdfData.Roughness;
+  return F_Schlick(spec.xxx, bxdfData.VoH)
+  * D_GGX(bxdfData.Roughness, bxdfData.NoH)
+  * Vis_SmithJointApprox(a, bxdfData.NoV, bxdfData.NoL);
 }
 
-BxdfData PrepareBxdfData(float3 albedo, float3 spec, float roughness,float3 L, float3 V, float3 N)
-{
-  BxdfData bxdfData;
-  bxdfData.Albedo = albedo;
-  bxdfData.Spec = spec;
-  bxdfData.Roughness = roughness;
-  bxdfData.N = N;
-  bxdfData.V = V;
-  bxdfData.L = L;
-  bxdfData.H = normalize(L+V);
-  bxdfData.NoV = dot(N,V);
-  bxdfData.NoL = dot(N,L);
-  bxdfData.NoH = dot(N,bxdfData.H);
-  bxdfData.LoH = dot(L,bxdfData.H);
-  bxdfData.VoH = dot(V,bxdfData.H);
 
-  return bxdfData;
+
+
+void PrepareBxdfData(inout BxdfData bxdfData,float3 albedo, float metallic, float roughness,float3 L, float3 V, float3 N)
+{
+  bxdfData.Albedo = albedo;
+  bxdfData.Metallic = metallic;
+  bxdfData.Roughness = roughness;
+  bxdfData.N = normalize(N);
+  bxdfData.V = normalize(V);
+  bxdfData.L = normalize(L);
+  bxdfData.H = normalize(L+V);
+  bxdfData.NoV = abs(dot(N,V)) + 1e-5;
+  bxdfData.NoL = dot(N,L);
+  bxdfData.NoH = saturate(dot(N,bxdfData.H));
+  bxdfData.VoH = saturate(dot(V,bxdfData.H));
+  bxdfData.VoL = saturate(dot(V,bxdfData.L));
+  //
+  //
+  //
+  // float InvLenH = rsqrt( 2 + 2 * Context.VoL );
+	// NoH = saturate( ( Context.NoL + Context.NoV ) * InvLenH );
+	// VoH = saturate( InvLenH + InvLenH * Context.VoL );
+
+
 }
 
 float4 main(VSOutput input) : SV_TARGET
 {
-  float3 L = normalize(float3(0,1,0));
-  float3 V = normalize(input.WorldPos.xyz - ubo.cameraPos.xyz);
-  float3 N = normalize(textureNormalMap.Sample(samplerNormalMap, input.UV).rbg*2-1);
-  float3 albedo = textureColorMap.Sample(samplerColorMap, input.UV).rgb;
+  float3 L = PerframeUbo.lightDir.xyz;
+  float3 V = input.WorldPos.xyz - PerframeUbo.cameraPos.xyz;
+  float3 N = textureNormalMap.Sample(samplerNormalMap, input.UV).rgb;
+  N = float3(N.x,N.z,N.y)-0.5f; // Danger hack find more elegant solution later
+  float3 albedo = sqrt(textureColorMap.Sample(samplerColorMap, input.UV).rgb);
   float4 metallicRoughness = texturePbrMap.Sample(samplerPbrMap, input.UV);
-  BxdfData bxdfData = PrepareBxdfData(albedo,albedo,0.95, L, V, N);
-  
+  BxdfData bxdfData;
+  PrepareBxdfData(bxdfData, albedo, 0, 0.95, L, V, N);
 
-  //return float4(1,1,1,1);
-  float3 lightColor = float3(1,0.956,0.839);
-  
+  float3 lightColor = float3(1,0.956,0.839)*3.14;
 
-  
-  
-  float3 diffuse = bxdfData.NoL * albedo;
-  float3 spec = PBR_SPEC(bxdfData);
-
-  return float4(lightColor * (diffuse), 1.0);
+  float3 diffuse = bxdfData.NoL * albedo / PI;
+  float3 spec = SPEC_GGX(bxdfData) * bxdfData.NoL;
+  return float4(lightColor * (diffuse+spec), 1.0);
 }

@@ -50,7 +50,11 @@ void TerrainSystem::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelin
     VkDeviceSize offsets[] = {0};
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_terrainRenderingPipeline);
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    float4x4 modelMatrix = Matrix::CreateTranslation(float3(1024,0,-1024));
+    float4x4 modelMatrix = Matrix::CreateScale(float3(-1,1,1));
+    
+    modelMatrix *= Matrix::CreateRotationY(3.1415926*0.5f);
+    modelMatrix *= Matrix::CreateTranslation(float3(-512,0,512));
+    //modelMatrix *= Matrix::CreateTranslation(float3(-512,0,512));
         vkCmdPushConstants(
                             commandBuffer,
                             pipelineLayout,
