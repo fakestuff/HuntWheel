@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19.0)
+cmake_minimum_required(VERSION 3.16.0)
 message(STATUS "Attempting auto locate Vulkan using CMake......")
 	
 # Find Vulkan Path using CMake's Vulkan Module

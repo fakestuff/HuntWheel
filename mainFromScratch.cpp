@@ -35,6 +35,8 @@
 #include <SkySystem.h>
 #include <TerrainSystem.h>
 #include <ObjModel.h>
+#include <World.h>
+#include <HardCodeScene.h>
 
 
 
@@ -133,8 +135,10 @@ public:
         initWindow();
         initVulkan();
         initImGui();
-        m_terrainSystem.Init(m_tfDevice, m_descriptorPool,m_renderPass, m_swapChainExtent, m_pipelineLayout, m_descriptorSetLayoutTextures);
+        //m_terrainSystem.Init(m_tfDevice, m_descriptorPool,m_renderPass, m_swapChainExtent, m_pipelineLayout, m_descriptorSetLayoutTextures);
         m_skySystem.Init(m_tfDevice, m_renderPass, m_swapChainExtent, m_pipelineLayout);
+        m_world.Init();
+        TF::SpawnObjects(&m_world);
         mainLoop();
         cleanup();
     }
@@ -144,6 +148,8 @@ private:
 
     SkySystem m_skySystem;
     TerrainSystem m_terrainSystem;
+
+    TF::World m_world;
 
     TF::TFVulkanDevice m_tfDevice;
     VkInstance m_instance;
@@ -208,8 +214,8 @@ private:
 
     ImGui_ImplVulkanH_Window m_mainWindowData;
 
-    float m_cameraAngle = 89;
-    float m_cameraDistance = 800;
+    float m_cameraAngle = 0;//89;
+    float m_cameraDistance = 5;//800;
     float m_cameraOffsetX = 0;
     float3 m_lightDir{0,1,0};
     float3 m_lightColor{1,1,1};
@@ -913,7 +919,7 @@ private:
         //vkCmdDrawIndexed(m_commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         m_gltfModel->Draw(m_commandBuffers[currentImage],m_pipelineLayout);
-        m_terrainSystem.Draw(m_commandBuffers[currentImage],m_pipelineLayout);
+        //m_terrainSystem.Draw(m_commandBuffers[currentImage],m_pipelineLayout);
         m_skySystem.Draw(m_commandBuffers[currentImage],m_pipelineLayout);
         
         
@@ -1618,10 +1624,13 @@ private:
 
     void cleanup()
     {
+        
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
-        m_terrainSystem.CleanUp();
+        
+        m_world.Shutdown();
+        //m_terrainSystem.CleanUp();
         m_skySystem.CleanUp();
         cleanupSwapChain();
 

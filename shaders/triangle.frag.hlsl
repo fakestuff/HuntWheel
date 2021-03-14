@@ -19,5 +19,5 @@ float4 main(VSOutput input) : SV_TARGET
   //return float4(1,1,1,1);
   float4 normalMap = textureNormalMap.Sample(samplerNormalMap, input.UV);
   float4 metallicRoughness = texturePbrMap.Sample(samplerPbrMap, input.UV);
-  return float4(textureColorMap.Sample(samplerColorMap, input.UV).rgb+0.2f, 1.0);
+  return float4(textureColorMap.Sample(samplerColorMap, input.UV).rgb, 1.0);
 }

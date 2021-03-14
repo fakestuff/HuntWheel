@@ -1,3 +1,11 @@
+#pragma once
+#include <string>
+#include <unordered_map>
+#include <memory>
+#include <MathHelper.h>
+#include <TFVulkanDevice.h>
+namespace TF
+{
 
 
 // Mesh
@@ -25,11 +33,62 @@ enum EVertexAttribute
     UV3             = 8,
 };
 
+struct Vertex
+{
+        float3 pos;
+        float3 normal;
+        float3 tangent;
+        float2 uv;
+};
+
+struct GpuVertexBuffer
+{
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+};
+
+struct GpuIndexBuffer
+{
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+};
+
 class Mesh 
 {
     public:
+        static std::unordered_map<std::string, std::shared_ptr<Mesh>> SMeshMap;
+        //unsigned int m_vertex_data_mask; currently forcing the following format
+        //
         
-
+        TFVulkanDevice m_tfVulkanDevice;
+        std::string m_meshName;
+        std::vector<Vertex> m_cpuVertexBuffer;
+        std::vector<int> m_cpuIndexBuffer;
+        GpuVertexBuffer m_gpuVertexBuffer;
+        GpuIndexBuffer m_gpuIndexBuffer;
+        bool m_hasIndexBuffer;
+        Mesh()
+        {
+            
+        }
+        ~Mesh()
+        {
+            
+        }
+        
     private:
-        unsigned int m_vertex_data_mask;
+        Mesh::CleanUp()
+        {
+            // delete vertex buffer
+            vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.buffer, nullptr);
+            vkFreeMemory(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.memory, nullptr);
+            // delete index buffer
+            if (m_hasIndexBuffer)
+            {
+                vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_gpuIndexBuffer.buffer, nullptr);
+                vkFreeMemory(m_vulkanDevice.logicalDevice, m_gpuIndexBuffer.memory, nullptr);
+            }
+        }
 };
+
+}
