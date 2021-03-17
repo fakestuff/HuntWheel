@@ -1,11 +1,3 @@
-#define TINYGLTF_IMPLEMENTATION
-#ifndef STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#endif
-#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#endif
-#define TINYGLTF_USE_RAPIDJSON
 // #define TINYGLTF_NOEXCEPTION // optional. disable exception handling.
 //#include <rapidjson
 #include <iostream>
@@ -59,7 +51,7 @@ void TestLoadModel()
 }
 
 
-GltfModel::GltfModel(TF::TFVulkanDevice vulkanDevice,std::string path, float scale)
+GltfModel::GltfModel(TF::TFVkGfxDevice vulkanDevice,std::string path, float scale)
 {
     m_scale = scale;
     m_vulkanDevice = vulkanDevice;

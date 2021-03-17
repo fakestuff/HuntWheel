@@ -60,7 +60,7 @@ class Mesh
         //unsigned int m_vertex_data_mask; currently forcing the following format
         //
         
-        TFVulkanDevice m_tfVulkanDevice;
+        TFVkGfxDevice m_tfVulkanDevice;
         std::string m_meshName;
         std::vector<Vertex> m_cpuVertexBuffer;
         std::vector<int> m_cpuIndexBuffer;
@@ -73,20 +73,20 @@ class Mesh
         }
         ~Mesh()
         {
-            
+            CleanUp();
         }
         
     private:
-        Mesh::CleanUp()
+        void CleanUp()
         {
             // delete vertex buffer
-            vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.buffer, nullptr);
-            vkFreeMemory(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.memory, nullptr);
+            vkDestroyBuffer(m_tfVulkanDevice.logicalDevice, m_gpuVertexBuffer.buffer, nullptr);
+            vkFreeMemory(m_tfVulkanDevice.logicalDevice, m_gpuVertexBuffer.memory, nullptr);
             // delete index buffer
             if (m_hasIndexBuffer)
             {
-                vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_gpuIndexBuffer.buffer, nullptr);
-                vkFreeMemory(m_vulkanDevice.logicalDevice, m_gpuIndexBuffer.memory, nullptr);
+                vkDestroyBuffer(m_tfVulkanDevice.logicalDevice, m_gpuIndexBuffer.buffer, nullptr);
+                vkFreeMemory(m_tfVulkanDevice.logicalDevice, m_gpuIndexBuffer.memory, nullptr);
             }
         }
 };

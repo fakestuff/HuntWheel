@@ -4,7 +4,7 @@
 #include <ObjModel.h>
 #include <VulkanPipelineHelper.h>
 
-void SkySystem::Init(TF::TFVulkanDevice tfVulkanDevice, VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout)
+void SkySystem::Init(TF::TFVkGfxDevice tfVulkanDevice, VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout)
 {
     m_vulkanDevice = tfVulkanDevice;
     auto p = Vfs::GetResPath();

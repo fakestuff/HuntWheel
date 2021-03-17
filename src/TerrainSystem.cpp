@@ -4,7 +4,7 @@
 #include <ObjModel.h>
 #include <VulkanPipelineHelper.h>
 
-void TerrainSystem::Init(TF::TFVulkanDevice tfVulkanDevice, VkDescriptorPool descriptorPool ,VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout, VkDescriptorSetLayout descriptorSetLayout)
+void TerrainSystem::Init(TF::TFVkGfxDevice tfVulkanDevice, VkDescriptorPool descriptorPool ,VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout, VkDescriptorSetLayout descriptorSetLayout)
 {
     m_vulkanDevice = tfVulkanDevice;
     auto p = Vfs::GetResPath();

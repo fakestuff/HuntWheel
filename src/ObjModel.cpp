@@ -5,7 +5,7 @@
 #include <iostream>
 
 
-ObjModel::ObjModel(fs::path objPath,TF::TFVulkanDevice tfVulkanDevice)
+ObjModel::ObjModel(fs::path objPath,TF::TFVkGfxDevice tfVulkanDevice)
 {
     m_vulkanDevice = tfVulkanDevice;
     tinyobj::ObjReaderConfig readerConfig;

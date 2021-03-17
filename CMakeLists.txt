@@ -74,7 +74,7 @@ file(GLOB_RECURSE EXTERNAL_HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR} REGULAR_EXPRESS
 
 
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
-add_executable(HuntWheel mainFromScratch.cpp ${CPP_FILES} ${HPP_FILES} ${EXTERNAL_HPP_FILES} ${EXTERNAL_CPP_FILES})
+add_executable(HuntWheel "main.cpp" ${CPP_FILES} ${HPP_FILES} ${EXTERNAL_HPP_FILES} ${EXTERNAL_CPP_FILES})
 if(MSVC)
     #add_definitions(-D_USE_MATH_DEFINES)
     add_definitions(-DNOMINMAX)

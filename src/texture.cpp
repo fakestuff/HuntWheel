@@ -56,7 +56,7 @@ namespace TF
         m_descriptor.imageLayout = m_imageLayout;
     }
 
-    void Texture2D::FromFile(const std::string& imgPath,TFVulkanDevice *device, VkQueue copyQueue, VkFilter filter, VkImageUsageFlags imageUsageFlags, VkImageLayout imageLayout, TextureUsage usage)
+    void Texture2D::FromFile(const std::string& imgPath, TFVkGfxDevice* device, VkQueue copyQueue, VkFilter filter, VkImageUsageFlags imageUsageFlags, VkImageLayout imageLayout, TextureUsage usage)
     {
         auto texSharedPtr = TF::TextureManager::Get()->LoadTexture(imgPath);
         m_device = device;
@@ -102,7 +102,7 @@ namespace TF
     }
 
 
-    void Texture2D::FromBuffer(void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight, TFVulkanDevice *device, VkQueue copyQueue, VkFilter filter, VkImageUsageFlags imageUsageFlags, VkImageLayout imageLayout, TextureUsage usage)
+    void Texture2D::FromBuffer(void* buffer, VkDeviceSize bufferSize, VkFormat format, uint32_t texWidth, uint32_t texHeight, TFVkGfxDevice*device, VkQueue copyQueue, VkFilter filter, VkImageUsageFlags imageUsageFlags, VkImageLayout imageLayout, TextureUsage usage)
 	{
 		assert(buffer);
 

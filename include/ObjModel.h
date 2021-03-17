@@ -26,11 +26,11 @@ public:
         VkDeviceMemory memory;
     };
     
-    ObjModel(fs::path objPath, TF::TFVulkanDevice tfVulkanDevice);
+    ObjModel(fs::path objPath, TF::TFVkGfxDevice tfVulkanDevice);
     void CleanUp();
     std::string name;
     std::vector<Vertex> m_vertexBuffer;
-    TF::TFVulkanDevice m_vulkanDevice;
+    TF::TFVkGfxDevice m_vulkanDevice;
     GPUVertexBuffer m_gpuVertexBuffer;
 
 };
