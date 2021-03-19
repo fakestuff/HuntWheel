@@ -5,9 +5,8 @@
 #include <iostream>
 
 
-ObjModel::ObjModel(fs::path objPath,TF::TFVkGfxDevice tfVulkanDevice)
+ObjModel::ObjModel(fs::path objPath)
 {
-    m_vulkanDevice = tfVulkanDevice;
     tinyobj::ObjReaderConfig readerConfig;
     readerConfig.mtl_search_path = objPath.parent_path().generic_string(); // Path to material files
     tinyobj::ObjReader reader;
@@ -97,23 +96,23 @@ ObjModel::ObjModel(fs::path objPath,TF::TFVkGfxDevice tfVulkanDevice)
     } vertexStaging;
     void* data;
 
-    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexStaging.buffer, vertexStaging.memory);     
-    vkMapMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory, 0, vertexBufferSize, 0, &data);
+    CreateBuffer(TF::TFVkGfxDevice::Get().physicsDevice, TF::TFVkGfxDevice::Get().logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexStaging.buffer, vertexStaging.memory);
+    vkMapMemory(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.memory, 0, vertexBufferSize, 0, &data);
     memcpy(data, m_vertexBuffer.data(), vertexBufferSize);
-    vkUnmapMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory);
+    vkUnmapMemory(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.memory);
     
 
-    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_gpuVertexBuffer.buffer, m_gpuVertexBuffer.memory);
+    CreateBuffer(TF::TFVkGfxDevice::Get().physicsDevice, TF::TFVkGfxDevice::Get().logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_gpuVertexBuffer.buffer, m_gpuVertexBuffer.memory);
     
-    CopyBuffer(m_vulkanDevice.logicalDevice, m_vulkanDevice.graphicsQueue, m_vulkanDevice.cmdPool,vertexStaging.buffer, m_gpuVertexBuffer.buffer, vertexBufferSize);
+    CopyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, TF::TFVkGfxDevice::Get().graphicsQueue, TF::TFVkGfxDevice::Get().cmdPool,vertexStaging.buffer, m_gpuVertexBuffer.buffer, vertexBufferSize);
 
-    vkDestroyBuffer(m_vulkanDevice.logicalDevice, vertexStaging.buffer, nullptr);
-    vkFreeMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory, nullptr);
+    vkDestroyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.buffer, nullptr);
+    vkFreeMemory(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.memory, nullptr);
 }
 
 void ObjModel::CleanUp()
 {
-    vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.buffer, nullptr);
-    vkFreeMemory(m_vulkanDevice.logicalDevice, m_gpuVertexBuffer.memory, nullptr);
+    vkDestroyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, m_gpuVertexBuffer.buffer, nullptr);
+    vkFreeMemory(TF::TFVkGfxDevice::Get().logicalDevice, m_gpuVertexBuffer.memory, nullptr);
 
 }

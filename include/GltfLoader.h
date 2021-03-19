@@ -84,7 +84,7 @@ public:
     };
 
 
-    GltfModel(TF::TFVkGfxDevice vulkanDevice, std::string path, float scale);
+    GltfModel(std::string path, float scale);
     ~GltfModel();
     void LoadNode(const tinygltf::Node& inputNode, const tinygltf::Model& modelAsset, 
                     SceneNode* parent,std::vector<Vertex>& vertexBuffer, std::vector<uint32_t>& indexBuffer);
@@ -96,8 +96,6 @@ public:
     void DrawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, const SceneNode& node);
 
     
-    
-    TF::TFVkGfxDevice m_vulkanDevice;
     std::vector<SceneNode> m_nodes;
     std::vector<Image> m_images;
     std::vector<Texture> m_textures; // map textures

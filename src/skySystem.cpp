@@ -4,14 +4,13 @@
 #include <ObjModel.h>
 #include <VulkanPipelineHelper.h>
 
-void SkySystem::Init(TF::TFVkGfxDevice tfVulkanDevice, VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout)
+void SkySystem::Init( VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout)
 {
-    m_vulkanDevice = tfVulkanDevice;
     auto p = Vfs::GetResPath();
     p.append("model");
     p.append("Sphere");
     p.append("sphere.obj");
-    m_objModel = std::make_unique<ObjModel>(p, tfVulkanDevice);
+    m_objModel = std::make_unique<ObjModel>(p);
     
     auto shaderPath = Vfs::GetShaderPath();
     auto vertShaderCode = ReadFile(Vfs::ConcatPath(shaderPath, "sky.vert.spv").generic_string());
@@ -19,7 +18,7 @@ void SkySystem::Init(TF::TFVkGfxDevice tfVulkanDevice, VkRenderPass renderPass, 
     
     PipelineParameter pipelineParameter = PipelineParameter(rtSize);
 
-    m_skyRenderingPipeline = CreateGraphicsPipeline(tfVulkanDevice.logicalDevice, pipelineLayout, renderPass, pipelineParameter, vertShaderCode, fragShaderCode);  
+    m_skyRenderingPipeline = CreateGraphicsPipeline(TF::TFVkGfxDevice::Get().logicalDevice, pipelineLayout, renderPass, pipelineParameter, vertShaderCode, fragShaderCode);  
 
 }
 
@@ -43,7 +42,7 @@ void SkySystem::Draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLay
 void SkySystem::CleanUp()
 {
     m_objModel->CleanUp();
-    vkDestroyPipeline(m_vulkanDevice.logicalDevice, m_skyRenderingPipeline, nullptr);
+    vkDestroyPipeline(TF::TFVkGfxDevice::Get().logicalDevice, m_skyRenderingPipeline, nullptr);
 }
 
 void SkySystem::creatPipeline()

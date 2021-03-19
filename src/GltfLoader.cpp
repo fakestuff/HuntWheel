@@ -51,10 +51,9 @@ void TestLoadModel()
 }
 
 
-GltfModel::GltfModel(TF::TFVkGfxDevice vulkanDevice,std::string path, float scale)
+GltfModel::GltfModel(std::string path, float scale)
 {
     m_scale = scale;
-    m_vulkanDevice = vulkanDevice;
     Model modelAsset;
     TinyGLTF loader;
     std::string err;
@@ -92,10 +91,10 @@ GltfModel::~GltfModel()
     {
         m_images[i].texture.Destroy();
     }
-    vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_vertexBuffer.buffer, nullptr);
-    vkFreeMemory(m_vulkanDevice.logicalDevice, m_vertexBuffer.memory, nullptr);
-    vkDestroyBuffer(m_vulkanDevice.logicalDevice, m_indexBuffer.buffer, nullptr);
-    vkFreeMemory(m_vulkanDevice.logicalDevice, m_indexBuffer.memory, nullptr);
+    vkDestroyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, m_vertexBuffer.buffer, nullptr);
+    vkFreeMemory(TF::TFVkGfxDevice::Get().logicalDevice, m_vertexBuffer.memory, nullptr);
+    vkDestroyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, m_indexBuffer.buffer, nullptr);
+    vkFreeMemory(TF::TFVkGfxDevice::Get().logicalDevice, m_indexBuffer.memory, nullptr);
 }
 
 void GltfModel::LoadNode(const tinygltf::Node& inputNode, const tinygltf::Model& modelAsset, 
@@ -295,7 +294,7 @@ void GltfModel::LoadImages(tinygltf::Model& modelAsset)
         {
             usage = TF::TextureUsage::MetallicRoughness;
         }
-        m_images[i].texture.FromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height, &m_vulkanDevice, m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,usage);
+        m_images[i].texture.FromBuffer(buffer, bufferSize, VK_FORMAT_R8G8B8A8_UNORM, glTFImage.width, glTFImage.height,  TF::TFVkGfxDevice::Get().graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,usage);
         if (deleteBuffer) {
             delete buffer;
         }
@@ -369,12 +368,12 @@ void GltfModel::UploadModel( const std::vector<Vertex>& uploadingVertexBuffer,co
     //     &vertexStaging.buffer,
     //     &vertexStaging.memory,
     //     vertexBuffer.data()));
-    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexStaging.buffer, vertexStaging.memory);
+    CreateBuffer(TF::TFVkGfxDevice::Get().physicsDevice,TF::TFVkGfxDevice::Get().logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexStaging.buffer, vertexStaging.memory);
         
     void* data;
-    vkMapMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory, 0, vertexBufferSize, 0, &data);
+    vkMapMemory(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.memory, 0, vertexBufferSize, 0, &data);
     memcpy(data, uploadingVertexBuffer.data(), vertexBufferSize);
-    vkUnmapMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory);
+    vkUnmapMemory(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.memory);
 
     // // Index data
     // VK_CHECK_RESULT(vulkanDevice.createBuffer(
@@ -384,22 +383,22 @@ void GltfModel::UploadModel( const std::vector<Vertex>& uploadingVertexBuffer,co
     //     &indexStaging.buffer,
     //     &indexStaging.memory,
     //     indexBuffer.data()));
-    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indexStaging.buffer, indexStaging.memory);
+    CreateBuffer(TF::TFVkGfxDevice::Get().physicsDevice,TF::TFVkGfxDevice::Get().logicalDevice,indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indexStaging.buffer, indexStaging.memory);
         
-    vkMapMemory(m_vulkanDevice.logicalDevice, indexStaging.memory, 0, indexBufferSize, 0, &data);
+    vkMapMemory(TF::TFVkGfxDevice::Get().logicalDevice, indexStaging.memory, 0, indexBufferSize, 0, &data);
     memcpy(data, uploadingIndexBuffer.data(), indexBufferSize);
-    vkUnmapMemory(m_vulkanDevice.logicalDevice, indexStaging.memory);
+    vkUnmapMemory(TF::TFVkGfxDevice::Get().logicalDevice, indexStaging.memory);
 
-    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer.buffer, m_vertexBuffer.memory);
-    CreateBuffer(m_vulkanDevice.physicsDevice,m_vulkanDevice.logicalDevice,indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_indexBuffer.buffer, m_indexBuffer.memory);
+    CreateBuffer(TF::TFVkGfxDevice::Get().physicsDevice,TF::TFVkGfxDevice::Get().logicalDevice,vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_vertexBuffer.buffer, m_vertexBuffer.memory);
+    CreateBuffer(TF::TFVkGfxDevice::Get().physicsDevice,TF::TFVkGfxDevice::Get().logicalDevice,indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_indexBuffer.buffer, m_indexBuffer.memory);
 
-    CopyBuffer(m_vulkanDevice.logicalDevice, m_vulkanDevice.graphicsQueue, m_vulkanDevice.cmdPool,vertexStaging.buffer, m_vertexBuffer.buffer, vertexBufferSize);
-    CopyBuffer(m_vulkanDevice.logicalDevice, m_vulkanDevice.graphicsQueue, m_vulkanDevice.cmdPool,indexStaging.buffer, m_indexBuffer.buffer, indexBufferSize);
+    CopyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, TF::TFVkGfxDevice::Get().graphicsQueue, TF::TFVkGfxDevice::Get().cmdPool,vertexStaging.buffer, m_vertexBuffer.buffer, vertexBufferSize);
+    CopyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, TF::TFVkGfxDevice::Get().graphicsQueue, TF::TFVkGfxDevice::Get().cmdPool,indexStaging.buffer, m_indexBuffer.buffer, indexBufferSize);
 
-    vkDestroyBuffer(m_vulkanDevice.logicalDevice, vertexStaging.buffer, nullptr);
-    vkFreeMemory(m_vulkanDevice.logicalDevice, vertexStaging.memory, nullptr);
-    vkDestroyBuffer(m_vulkanDevice.logicalDevice, indexStaging.buffer, nullptr);
-    vkFreeMemory(m_vulkanDevice.logicalDevice, indexStaging.memory, nullptr);
+    vkDestroyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.buffer, nullptr);
+    vkFreeMemory(TF::TFVkGfxDevice::Get().logicalDevice, vertexStaging.memory, nullptr);
+    vkDestroyBuffer(TF::TFVkGfxDevice::Get().logicalDevice, indexStaging.buffer, nullptr);
+    vkFreeMemory(TF::TFVkGfxDevice::Get().logicalDevice, indexStaging.memory, nullptr);
 
 }
 

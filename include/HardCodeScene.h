@@ -8,7 +8,7 @@ namespace TF
     {
         auto entity0 = world->CreateEntity("Entity0");
         auto entity1 = world->CreateEntity("Entity1");
-        LoadGltfFModel(s_tfVulkanDevice, world, Vfs::ConcatPath(Vfs::GetResPath(), "model/MetalRoughSpheresNoTextures/MetalRoughSpheresNoTextures.gltf"));
+        LoadGltfFModel(world, Vfs::ConcatPath(Vfs::GetResPath(), "model/MetalRoughSpheresNoTextures/MetalRoughSpheresNoTextures.gltf"));
         for (auto& it: world->m_entities)
         {
             std::cout << it.first << " " << it.second->m_name << std::endl;

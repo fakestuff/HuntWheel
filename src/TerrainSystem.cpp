@@ -4,14 +4,13 @@
 #include <ObjModel.h>
 #include <VulkanPipelineHelper.h>
 
-void TerrainSystem::Init(TF::TFVkGfxDevice tfVulkanDevice, VkDescriptorPool descriptorPool ,VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout, VkDescriptorSetLayout descriptorSetLayout)
+void TerrainSystem::Init(VkDescriptorPool descriptorPool ,VkRenderPass renderPass, VkExtent2D rtSize,VkPipelineLayout pipelineLayout, VkDescriptorSetLayout descriptorSetLayout)
 {
-    m_vulkanDevice = tfVulkanDevice;
     auto p = Vfs::GetResPath();
     p.append("model");
     p.append("Terrain");
     p.append("sampleTerrain.obj");
-    m_objModel = std::make_unique<ObjModel>(p, tfVulkanDevice);
+    m_objModel = std::make_unique<ObjModel>(p);
     
     auto shaderPath = Vfs::GetShaderPath();
     auto vertShaderCode = ReadFile(Vfs::ConcatPath(shaderPath, "Terrain.vert.spv").generic_string());
@@ -19,14 +18,14 @@ void TerrainSystem::Init(TF::TFVkGfxDevice tfVulkanDevice, VkDescriptorPool desc
     
     PipelineParameter pipelineParameter = PipelineParameter(rtSize);
 
-    m_terrainRenderingPipeline = CreateGraphicsPipeline(tfVulkanDevice.logicalDevice, pipelineLayout, renderPass, pipelineParameter, vertShaderCode, fragShaderCode);  
+    m_terrainRenderingPipeline = CreateGraphicsPipeline(TF::TFVkGfxDevice::Get().logicalDevice, pipelineLayout, renderPass, pipelineParameter, vertShaderCode, fragShaderCode);
     
     p = Vfs::GetResPath();
     p.append("model");p.append("Terrain");p.append("sampleTerrainColor.png");
-    m_baseMap.FromFile(p.generic_string(), &m_vulkanDevice, m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,TF::TextureUsage::Albedo);
+    m_baseMap.FromFile(p.generic_string(),  m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,TF::TextureUsage::Albedo);
     p = Vfs::GetResPath();
     p.append("model");p.append("Terrain");p.append("sampleTerrainNormal.png");
-    m_normalMap.FromFile(p.generic_string(), &m_vulkanDevice, m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,TF::TextureUsage::Normal);
+    m_normalMap.FromFile(p.generic_string(),  m_vulkanDevice.graphicsQueue,VK_FILTER_LINEAR,4U,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,TF::TextureUsage::Normal);
     {
         VkDescriptorSetAllocateInfo samplerAllocInfo{};
         samplerAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

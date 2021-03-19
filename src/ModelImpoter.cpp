@@ -52,7 +52,7 @@ namespace TF
     //    }
     //}
 
-    int AccessAttributeBuffer(const tinygltf::Model& glTFModel, const tinygltf::Primitive& glTFPrimitive, std::string attribute, const float* buffer)
+    int AccessAttributeBuffer(const tinygltf::Model& glTFModel, const tinygltf::Primitive& glTFPrimitive, std::string attribute, const float*& buffer)
     {
         if (glTFPrimitive.attributes.find(attribute) != glTFPrimitive.attributes.end())
         {
@@ -102,12 +102,12 @@ namespace TF
         }
         default:
             std::cerr << "Index component type " << accessor.componentType << " not supported!" << std::endl;
-            return;
+            return 0;
         }
         return indexCount;
     }
 
-    void LoadMesh(const tinygltf::Model& glTFModel, const tinygltf::Node& glTFNode, std::vector<Vertex> vertexBuffer, std::vector<uint32_t> indexBuffer)
+    void LoadMesh(const tinygltf::Model& glTFModel, const tinygltf::Node& glTFNode, std::vector<Vertex>& vertexBuffer, std::vector<uint32_t>& indexBuffer)
     {
         if (glTFNode.mesh > -1)
         {
@@ -123,9 +123,9 @@ namespace TF
                 uint32_t indexCount = 0;
                 size_t vertexCount = 0;
                 vertexCount = AccessAttributeBuffer(glTFModel, glTFMesh.primitives[i], ATTRIBUTE_POSITION, positionBuffer);
-                AccessAttributeBuffer(glTFModel, glTFMesh.primitives[i], ATTRIBUTE_POSITION, positionBuffer);
-                AccessAttributeBuffer(glTFModel, glTFMesh.primitives[i], ATTRIBUTE_POSITION, positionBuffer);
-                AccessAttributeBuffer(glTFModel, glTFMesh.primitives[i], ATTRIBUTE_POSITION, positionBuffer);
+                AccessAttributeBuffer(glTFModel, glTFMesh.primitives[i], ATTRIBUTE_NORMAL, normalsBuffer);
+                AccessAttributeBuffer(glTFModel, glTFMesh.primitives[i], ATTRIBUTE_TANGENT, tangentBuffer);
+                AccessAttributeBuffer(glTFModel, glTFMesh.primitives[i], ATTRIBUTE_TEXCOORD_0, texCoordsBuffer);
                 for (auto v = 0; v < vertexCount; v++)
                 {
                     Vertex vert{};
@@ -149,7 +149,7 @@ namespace TF
 
     }
 
-    void LoadMesh(const tinygltf::Model& glTFModel, std::vector<Vertex> vertexBuffer, std::vector<uint32_t> indexBuffer)
+    void LoadMesh(const tinygltf::Model& glTFModel, std::vector<Vertex>& vertexBuffer, std::vector<uint32_t>& indexBuffer)
     {
         for (auto sid = 0; sid < glTFModel.scenes.size(); sid++)
         {
@@ -161,7 +161,8 @@ namespace TF
             }
         }
     }
-    void LoadGltfFModel(TFVkGfxDevice tfVulkanDevice, World* world, fs::path gltfPath)
+
+    void LoadGltfFModel(World* world, fs::path gltfPath)
     {
 
         Model glTFModel;
@@ -190,8 +191,8 @@ namespace TF
         // Load Material
 
         // Load Mesh
-        
-        //UploadMeshBuffers();
+        LoadMesh(glTFModel, vertexBuffer, indexBuffer);
+        std::shared_ptr<Mesh> mesh = Mesh::GetOrCreateMesh(gltfPath.generic_string(), vertexBuffer, indexBuffer);
         // Instantiate objects in the scene
         //for (auto sid = 0; sid < glTFModel.scenes.size(); sid++)
         /*{

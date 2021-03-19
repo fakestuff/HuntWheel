@@ -62,7 +62,6 @@ namespace TF // TF stand for touch fish :)
         int m_mipLevels;
         std::vector<unsigned char> Pixels;
 
-        TFVkGfxDevice* m_device;
         VkImage m_image;
         VkImageLayout m_imageLayout;
         VkDeviceMemory m_deviceMemory;
@@ -74,7 +73,6 @@ namespace TF // TF stand for touch fish :)
         void Destroy();
         void FromFile(
             const std::string&  path,
-            TFVkGfxDevice*     device,
             VkQueue             copyQueue, 
             VkFilter            filter, 
             VkImageUsageFlags   imageUsageFlags, 
@@ -87,7 +85,6 @@ namespace TF // TF stand for touch fish :)
             VkFormat            format,
             uint32_t            texWidth,
             uint32_t            texHeight,
-            TFVkGfxDevice*     device,
             VkQueue             copyQueue,
             VkFilter            filter          = VK_FILTER_LINEAR,
             VkImageUsageFlags   imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
