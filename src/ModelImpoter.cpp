@@ -15,9 +15,9 @@ using namespace tinygltf;
 
 namespace TF
 {
-    const std::string ATTRIBUTE_POSITION   = "POSITION";
-    const std::string ATTRIBUTE_NORMAL     = "NORMAL";
-    const std::string ATTRIBUTE_TANGENT    = "TANGENT";
+    const std::string ATTRIBUTE_POSITION = "POSITION";
+    const std::string ATTRIBUTE_NORMAL = "NORMAL";
+    const std::string ATTRIBUTE_TANGENT = "TANGENT";
     const std::string ATTRIBUTE_TEXCOORD_0 = "TEXCOORD_0";
 
     //void LoadNode(World* world, const tinygltf::Model& glTFModel, const tinygltf::Node& inputNode)
@@ -162,6 +162,34 @@ namespace TF
         }
     }
 
+    void LoadMaterials(const tinygltf::Model& glTFModel, std::vector<std::shared_ptr<Material>>& materials)
+    {
+        materials.resize(glTFModel.materials.size());
+        for (size_t i = 0; i < glTFModel.materials.size(); i++)
+        {
+            auto glTFMaterial = glTFModel.materials[i];
+            std::shared_ptr<Material> materialPtr = std::make_shared<Material>();
+            if (glTFMaterial.values.find(GLTF_BASE_COLOR_FACTOR) != glTFMaterial.values.end())
+            {
+                double* baseColorPtr = glTFMaterial.values[GLTF_BASE_COLOR_FACTOR].ColorFactor().data();
+                materialPtr.get()->m_baseColorFactor = float4(baseColorPtr[0], baseColorPtr[1], baseColorPtr[2], baseColorPtr[3]);
+            }
+            if (glTFMaterial.values.find(GLTF_METALLIC_FACTOR) != glTFMaterial.values.end())
+            {
+                materialPtr.get()->m_metallicFactor = glTFMaterial.values[GLTF_METALLIC_FACTOR].Factor();
+            }
+            if (glTFMaterial.values.find(GLTF_ROUGHNESS_FACTOR) != glTFMaterial.values.end())
+            {
+                materialPtr.get()->m_roughnessFactor = glTFMaterial.values[GLTF_ROUGHNESS_FACTOR].Factor();
+            }
+
+            std::cout << "Material ID:" << i << " : " << "baseColor: " << materialPtr.get()->m_baseColorFactor.x << " " <<
+                materialPtr.get()->m_baseColorFactor.y << " " << materialPtr.get()->m_baseColorFactor.z << " " <<
+                materialPtr.get()->m_baseColorFactor.w << std::endl << "metallic: " << materialPtr.get()->m_metallicFactor << " "
+                << "roughness: " << materialPtr.get()->m_roughnessFactor << std::endl;
+        }
+    }
+
     void LoadGltfFModel(World* world, fs::path gltfPath)
     {
 
@@ -172,6 +200,16 @@ namespace TF
 
         std::vector<uint32_t> indexBuffer; // prepare cpu data for uploading
         std::vector<Vertex> vertexBuffer;
+
+        std::vector<std::shared_ptr<Material>> glTFMaterials;
+
+        std::vector<uint32_t> rendererIndexStart;
+        std::vector<uint32_t> rendererIndexCount;
+        std::vector<std::shared_ptr<Mesh>> rendererMeshes;
+        std::vector<std::shared_ptr<Material>>renderMeshes;
+        std::vector<float3> rendererPos;
+        std::vector<float4> rendererRot;
+        std::vector<float3> rendererScale;
 
         bool fileLoaded = loader.LoadASCIIFromFile(&glTFModel, &err, &warn, gltfPath.generic_string());
         if (!fileLoaded)
@@ -189,7 +227,7 @@ namespace TF
         }
         
         // Load Material
-
+        LoadMaterials(glTFModel, glTFMaterials);
         // Load Mesh
         LoadMesh(glTFModel, vertexBuffer, indexBuffer);
         std::shared_ptr<Mesh> mesh = Mesh::GetOrCreateMesh(gltfPath.generic_string(), vertexBuffer, indexBuffer);

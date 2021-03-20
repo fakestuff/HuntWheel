@@ -14,7 +14,7 @@ public:
     std::unique_ptr<Transform> m_transform; // TODO: handle transforms in bucket allocation later
     // std::shared_ptr<Mesh> m_mesh;
     // std::unique_ptr<Material> m_material;
-    std::unique_ptr<Renderer> m_renderer;
+    std::shared_ptr<Renderer> m_renderer;
 
     Entity(const std::string& name, int eid): m_name(name), m_entityId(eid) 
     {
