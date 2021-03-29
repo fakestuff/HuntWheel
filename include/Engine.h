@@ -1,5 +1,7 @@
 #pragma once
 #include <entt/entt.hpp>
+#include <Core/Timer.h>
+#include <Core/WindowSystem.h>
 namespace TF
 {
 // Try using as many components as possible in ecs
@@ -13,7 +15,15 @@ public:
 	void Terminate();
 	~Engine();
 private:
-	double m_time = 0;
 	entt::registry m_reg;
+	Timer m_timer;
+	// window system
+	WindowSystem m_window;
+	// device
+	// mesh system
+	// texture system
+
+	// world -- game logic related entity
+
 };
 }

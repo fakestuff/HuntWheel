@@ -4,7 +4,6 @@
 int main()
 {
     TF::Engine engine = {};
-    engine.Run();
     try
     {
         engine.Run();

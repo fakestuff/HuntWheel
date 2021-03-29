@@ -10,11 +10,13 @@ namespace TF
 	void Engine::Run()
 	{
 		Init();
-
-		while (false)
+		int i = 0;
+		while (!m_window.ShouldCloseWindow())
 		{
-			
-			Tick(0);
+			m_timer.Tick();
+			double dt = m_timer.DeltaTime();
+			std::cout << dt << std::endl;
+			Tick(dt);
 		}
 
 		Terminate();
@@ -22,11 +24,14 @@ namespace TF
 
 	void Engine::Tick(double dt)
 	{
+		m_window.Tick();
 	}
 
 	void Engine::Init()
 	{
 		std::cout << "Engine initilization" << std::endl;
+		m_timer.Init();
+		m_window.Init();
 	}
 
 
