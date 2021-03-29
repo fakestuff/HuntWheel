@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16.0)
+cmake_minimum_required(VERSION 3.12.0)
 message(STATUS "Attempting auto locate Vulkan using CMake......")
 	
 # Find Vulkan Path using CMake's Vulkan Module
@@ -37,6 +37,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(glfw3 3.3.2 CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(tinyobjloader CONFIG REQUIRED)
+find_package(EnTT CONFIG REQUIRED)
 
 # vulkan-1 library for build Vulkan application.
 set(VULKAN_LIB_LIST "vulkan-1")
@@ -74,12 +75,11 @@ file(GLOB_RECURSE EXTERNAL_HPP_FILES ${CMAKE_CURRENT_SOURCE_DIR} REGULAR_EXPRESS
 
 
 #add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES})
-add_executable(HuntWheel "main.cpp" ${CPP_FILES} ${HPP_FILES} ${EXTERNAL_HPP_FILES} ${EXTERNAL_CPP_FILES})
+add_executable(HuntWheel main.cpp ${CPP_FILES} ${HPP_FILES} ${EXTERNAL_HPP_FILES} ${EXTERNAL_CPP_FILES})
 if(MSVC)
-    #add_definitions(-D_USE_MATH_DEFINES)
+    add_definitions(-D_USE_MATH_DEFINES)
     add_definitions(-DNOMINMAX)
-	# 自定义编译规则
-	# set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
+	set_property(TARGET HuntWheel APPEND PROPERTY LINK_FLAGS "/NODEFAULTLIB:MSVCRT")
 endif()
 
-target_link_libraries(HuntWheel PRIVATE glfw imgui::imgui tinyobjloader::tinyobjloader ${VULKAN_LIB_LIST})
+target_link_libraries(HuntWheel PRIVATE glfw imgui::imgui tinyobjloader::tinyobjloader EnTT::EnTT ${VULKAN_LIB_LIST})

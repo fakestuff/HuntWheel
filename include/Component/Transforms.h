@@ -6,8 +6,22 @@ namespace TF
 class Transform
 {
 public:
-    float3 m_pos;
-    float3 m_scale;
-    float4 m_rotation;
+    /*
+    TODO:
+    float3 GetTranslate()
+    {
+       
+    }
+    float3 GetScale()
+    {
+
+    }
+    float3 GetRotation()
+    {
+
+    }
+    */
+    float4x4 m_localMatrix;
+    float4x4 m_worldModelMatrix;
 };
 }

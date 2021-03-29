@@ -1,23 +1,36 @@
 #pragma once
 #include <unordered_map>
+#include <memory>
 #include <Entity.h>
 #include <iostream>
+#include <entt/entt.hpp>
+
 namespace TF
 {
 class World
 {
 public:
-    std::unordered_map<int, Entity*> m_entities;
+    std::unordered_map<int, std::shared_ptr<Entity>> m_entities;
+    std::vector<std::shared_ptr<Entity>> m_sceneRoot;
     int m_nextEid = 0;
     
-    Entity* CreateEntity(const std::string & name)
+    std::shared_ptr<Entity> CreateEntity(const std::string & name)
     {
-        Entity* entity = new Entity(name, m_nextEid);
-        m_entities[m_nextEid] = entity;
+        auto entityPtr = std::make_shared<Entity>(name, m_nextEid);
+        m_entities[m_nextEid] = std::make_shared<Entity>(name, m_nextEid);
         m_nextEid++;
-        return entity;
+        return entityPtr;
     }
-    Entity* GetEntity(int eid)
+
+
+    void UpdateMatrix()
+    {
+
+    }
+
+
+
+    std::shared_ptr<Entity> GetEntity(int eid)
     {
         return m_entities[eid];
     }
@@ -29,7 +42,7 @@ public:
     {
         for (auto& it: m_entities)
         {
-            delete it.second;
+            it.second.reset();
         }
     }
 };

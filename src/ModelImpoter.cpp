@@ -107,7 +107,7 @@ namespace TF
         return indexCount;
     }
 
-    void LoadMesh(const tinygltf::Model& glTFModel, const tinygltf::Node& glTFNode, std::vector<Vertex>& vertexBuffer, std::vector<uint32_t>& indexBuffer)
+    void LoadMesh(const tinygltf::Model& glTFModel, const tinygltf::Node& glTFNode, std::vector<Vertex>& vertexBuffer, std::vector<uint32_t>& indexBuffer, std::unordered_map<int, std::tuple<int, int>>& primitveIndicesMap)
     {
         if (glTFNode.mesh > -1)
         {
@@ -135,7 +135,7 @@ namespace TF
                     vert.uv = texCoordsBuffer ? float2(texCoordsBuffer[v * 2], texCoordsBuffer[v * 2 + 1]) : float2(0, 0);
                     vertexBuffer.push_back(vert);
                 }
-                indexCount = LoadIndexBuffer(glTFModel, glTFMesh.primitives[i], indexBuffer, vertexStart);
+                //indexCount = LoadIndexBuffer(glTFModel, glTFMesh.primitives[i], indexBuffer);
             }
         }
 
@@ -143,7 +143,7 @@ namespace TF
         {
             for (auto i = 0; i < glTFNode.children.size(); i++)
             {
-                LoadMesh(glTFModel, glTFModel.nodes[glTFNode.children[i]], vertexBuffer, indexBuffer);
+                //LoadMesh(glTFModel, glTFModel.nodes[glTFNode.children[i]], vertexBuffer, indexBuffer);
             }
         }
 
@@ -157,7 +157,7 @@ namespace TF
             for (auto i = 0; i < scene.nodes.size(); i++)
             {
                 const Node node = glTFModel.nodes[scene.nodes[i]];
-                LoadMesh(glTFModel, node, vertexBuffer, indexBuffer);
+                //LoadMesh(glTFModel, node, vertexBuffer, indexBuffer);
             }
         }
     }
@@ -189,6 +189,68 @@ namespace TF
                 << "roughness: " << materialPtr.get()->m_roughnessFactor << std::endl;
         }
     }
+    void SpawnObjects(World* world, const tinygltf::Model& glTFModel, const tinygltf::Node& node,std::shared_ptr<Entity> parent, std::shared_ptr<Mesh> mesh, const std::vector<std::shared_ptr<Material>> & materials)
+    {
+        std::shared_ptr<Entity> entity = world->CreateEntity(node.name);
+        entity.get()->m_transform = std::make_shared<Transform>();
+        float4x4 localMatrix = Matrix::Identity;
+        // Get the local node matrix
+        // It's either made up from translation, rotation, scale or a 4x4 matrix
+        if (node.scale.size() == 3) 
+        {
+            localMatrix *= Matrix::CreateScale(node.scale[0], node.scale[1], node.scale[2]);
+        }
+        if (node.rotation.size() == 4) 
+        {
+            float4x4 rot = Matrix::CreateFromQuaternion(Quaternion(node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3]));
+            localMatrix *= rot;
+        }
+        if (node.translation.size() == 3) 
+        {
+            localMatrix *= Matrix::CreateTranslation(float3(node.translation[0], node.translation[1], node.translation[2]));
+        }
+        if (node.matrix.size() == 16) 
+        {
+            float m[16];
+            for (int i = 0; i < 16; i++)
+            {
+                m[i] = node.matrix[i];
+            }
+            localMatrix = Matrix::Matrix(m);
+        };
+        entity->m_transform->m_localMatrix = localMatrix;
+
+        if (node.mesh > -1)
+        {
+            entity->m_renderer = std::make_shared<Renderer>();
+            entity->m_renderer->m_mesh = mesh;
+            // handle index const tinygltf::Mesh glTFMesh = glTFModel.meshes[node.mesh];
+        }
+        
+        
+        // iterate through child
+        // if is root, add to scene root
+        // generate renderer
+        // set transform
+        // generate child
+        if (parent.get() != nullptr)
+        {
+            // push back to children
+        }
+    }
+
+    void SpawnScene(World* world, const tinygltf::Model& glTFModel, std::shared_ptr<Mesh> mesh, const std::vector<std::shared_ptr<Material>>& materials)
+    {
+        for (int sid = 0; sid < glTFModel.scenes.size(); sid++)
+        {
+            const Scene& scene = glTFModel.scenes[sid];
+            for (auto i = 0; i < scene.nodes.size(); i++)
+            {
+                const Node node = glTFModel.nodes[scene.nodes[i]];
+                SpawnObjects(world, glTFModel, node, std::shared_ptr<Entity>(), mesh, materials);
+            }
+        }
+    }
 
     void LoadGltfFModel(World* world, fs::path gltfPath)
     {
@@ -202,14 +264,15 @@ namespace TF
         std::vector<Vertex> vertexBuffer;
 
         std::vector<std::shared_ptr<Material>> glTFMaterials;
+        std::unordered_map<int, std::tuple<int, int>> primitiveIndicesRange;
 
-        std::vector<uint32_t> rendererIndexStart;
+        /*std::vector<uint32_t> rendererIndexStart;
         std::vector<uint32_t> rendererIndexCount;
         std::vector<std::shared_ptr<Mesh>> rendererMeshes;
         std::vector<std::shared_ptr<Material>>renderMeshes;
         std::vector<float3> rendererPos;
         std::vector<float4> rendererRot;
-        std::vector<float3> rendererScale;
+        std::vector<float3> rendererScale;*/
 
         bool fileLoaded = loader.LoadASCIIFromFile(&glTFModel, &err, &warn, gltfPath.generic_string());
         if (!fileLoaded)
@@ -219,7 +282,7 @@ namespace TF
         
         
         
-        // Load Texture
+        //TODO: LEVEL0: Load Texture when GLTF model actucally have textures
         for (size_t i = 0; i < glTFModel.images.size(); i++)
         {
             tinygltf::Image& glTFImage = glTFModel.images[i];
@@ -229,21 +292,10 @@ namespace TF
         // Load Material
         LoadMaterials(glTFModel, glTFMaterials);
         // Load Mesh
-        LoadMesh(glTFModel, vertexBuffer, indexBuffer);
-        std::shared_ptr<Mesh> mesh = Mesh::GetOrCreateMesh(gltfPath.generic_string(), vertexBuffer, indexBuffer);
-        // Instantiate objects in the scene
-        //for (auto sid = 0; sid < glTFModel.scenes.size(); sid++)
-        /*{
-            const Scene& scene = glTFModel.scenes[sid];
-            for (auto i = 0; i < scene.nodes.size(); i++)
-            {
-                const Node node = glTFModel.nodes[scene.nodes[i]];
-                LoadNode(glTFModel, node, nullptr, vertexBuffer, indexBuffer);
-            }
-        }*/
-        //UploadModel(vertexBuffer, indexBuffer);
-        
-        // Register Shader To RenderManager
-        world->CreateEntity("");
+        //LoadMesh(glTFModel, vertexBuffer, indexBuffer, meshIndicesRange);
+        //std::shared_ptr<Mesh> mesh = Mesh::GetOrCreateMesh(gltfPath.generic_string(), vertexBuffer, indexBuffer);
+        //
+        ////TODO: LEVEL6 Instantiate Entity
+        //SpawnObjects(world, std::shared_ptr<Entity>(), glTFModel, mesh, glTFMaterials);
     }
 }
