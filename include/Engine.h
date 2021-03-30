@@ -2,6 +2,8 @@
 #include <entt/entt.hpp>
 #include <Core/Timer.h>
 #include <Core/WindowSystem.h>
+#include <Core/GameWorld.h>
+#include <Graphics/RenderSystem.h>
 namespace TF
 {
 // Try using as many components as possible in ecs
@@ -24,6 +26,9 @@ private:
 	// texture system
 
 	// world -- game logic related entity
+	// loop through all the gameplay sub system
+	GameWorld m_world;
+	RenderSystem m_renderSystem;
 
 };
 }

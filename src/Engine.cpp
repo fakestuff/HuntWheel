@@ -25,6 +25,8 @@ namespace TF
 	void Engine::Tick(double dt)
 	{
 		m_window.Tick();
+		m_world.Tick(dt, m_reg);
+		m_renderSystem.Tick(dt, m_reg);
 	}
 
 	void Engine::Init()
@@ -32,12 +34,20 @@ namespace TF
 		std::cout << "Engine initilization" << std::endl;
 		m_timer.Init();
 		m_window.Init();
+		m_world.Init();
+		m_renderSystem.Init();
 	}
 
 
 	void Engine::Terminate()
 	{
 		std::cout << "Engine termination" << std::endl;
+		m_renderSystem.Terminate();
+		m_world.Terminate();
+		m_window.Terminate();
+		m_timer.Terminate();
+		
+
 	}
 
 	Engine::~Engine()
