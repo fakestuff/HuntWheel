@@ -1,12 +1,14 @@
-cmake_minimum_required(VERSION 3.12.0)
+cmake_minimum_required(VERSION 3.19.0)
+
+
 message(STATUS "Attempting auto locate Vulkan using CMake......")
-	
+
 # Find Vulkan Path using CMake's Vulkan Module
 # This will return Boolean 'Vulkan_FOUND' indicating the status of find as success(ON) or fail(OFF).
 # Include directory path - 'Vulkan_INCLUDE_DIRS' and 'Vulkan_LIBRARY' with required libraries.
 find_package(Vulkan)
 if(NOT Vulkan_FOUND)
-set(Vulkan_INCLUDE_DIRS "C:/VulkanSDK/1.2.154.1")
+set(Vulkan_INCLUDE_DIRS $ENV{VK_SDK_PATH})
 endif()
 # Try extracting VulkanSDK path from ${Vulkan_INCLUDE_DIRS}
 if (NOT ${Vulkan_INCLUDE_DIRS} STREQUAL "")
@@ -28,6 +30,7 @@ if(NOT Vulkan_FOUND)
     endif()
 endif()
 
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 
 project(HuntWheel VERSION 0.1.0)

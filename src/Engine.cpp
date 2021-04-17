@@ -34,16 +34,17 @@ namespace TF
 		std::cout << "Engine initilization" << std::endl;
 		m_timer.Init();
 		m_window.Init();
+		m_renderSystem.Init(m_window.GetWindow());
 		m_world.Init();
-		m_renderSystem.Init();
+		
 	}
 
 
 	void Engine::Terminate()
 	{
 		std::cout << "Engine termination" << std::endl;
-		m_renderSystem.Terminate();
 		m_world.Terminate();
+		m_renderSystem.Terminate();
 		m_window.Terminate();
 		m_timer.Terminate();
 		

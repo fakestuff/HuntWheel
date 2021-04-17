@@ -1,6 +1,6 @@
 #pragma once
 #include <EngineSystemBase.h>
-class GLFWwindow;
+struct GLFWwindow;
 namespace TF
 {
 	
