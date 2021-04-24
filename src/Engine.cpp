@@ -15,7 +15,7 @@ namespace TF
 		{
 			m_timer.Tick();
 			double dt = m_timer.DeltaTime();
-			std::cout << dt << std::endl;
+			//std::cout << dt << std::endl;
 			Tick(dt);
 		}
 

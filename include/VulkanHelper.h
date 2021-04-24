@@ -24,8 +24,7 @@ struct QueueFamilyIndices
 {
 	uint32_t m_graphics;
 	uint32_t m_compute;
-	uint32_t m_transfer;
-	uint32_t m_present;
+	uint32_t m_transfer; // no more present queue, always handle by graphics queue
 };
 
 inline std::string VkErrorString(VkResult errorCode)

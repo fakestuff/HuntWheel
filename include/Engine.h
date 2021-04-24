@@ -24,11 +24,11 @@ private:
 	// device
 	// mesh system
 	// texture system
-
+	RenderSystem m_renderSystem;
 	// world -- game logic related entity
 	// loop through all the gameplay sub system
 	GameWorld m_world;
-	RenderSystem m_renderSystem;
+	
 
 };
 }

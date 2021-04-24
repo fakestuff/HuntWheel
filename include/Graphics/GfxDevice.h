@@ -19,9 +19,9 @@ namespace GFX {
 		VkSurfaceKHR m_surface;
 		
 		/** @brief Physical device representation */
-		VkPhysicalDevice m_physicalDevice;
+		VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
 		/** @brief Logical device representation (application's view of the device) */
-		VkDevice m_logicalDevice;
+		VkDevice m_logicalDevice = VK_NULL_HANDLE;
 		/** @brief Properties of the physical device including limits that the application can check against */
 		VkPhysicalDeviceProperties m_properties;
 		/** @brief Features of the physical device that an application can use to check if a feature is supported */
@@ -51,19 +51,18 @@ namespace GFX {
 		~GfxVkDevice();
 		bool			CheckValidationLayerSupport();
 		void			CreateInstance(bool enableValidationLayers);
-		void			CreateSurface();
-
-		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+		
 		bool			CheckDeviceExtensionSupport(VkPhysicalDevice device);
 		bool			IsPhysicalDeviceSuitable(VkPhysicalDevice device);
 		void			ChoosePhysicalDevice();
 
-
+		void			CreateSurface();
+		void			GetBackBufferSize(int* width, int* height);
 		void			PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 		std::vector<const char*> GetRequiredExtensions(bool enableValidationLayers);
 		uint32_t        GetMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr) const;
 		uint32_t        GetQueueFamilyIndex(VkQueueFlagBits queueFlags) const;
-		VkResult        CreateLogicalDevice(VkPhysicalDeviceFeatures enabledFeatures, std::vector<const char*> enabledExtensions, void* pNextChain, bool useSwapChain = true, VkQueueFlags requestedQueueTypes = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+		VkResult        CreateLogicalDevice(VkPhysicalDeviceFeatures enabledFeatures, std::vector<const char*> enabledExtensions, void* pNextChain, bool useSwapChain = true, VkQueueFlags requestedQueueTypes = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
 		VkResult        CreateBuffer(VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, VkDeviceSize size, VkBuffer* buffer, VkDeviceMemory* memory, void* data = nullptr);
 		VkResult        CreateBuffer(VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, GfxVkBuffer* buffer, VkDeviceSize size, void* data = nullptr);
 		void            CopyBuffer(GfxVkBuffer* src, GfxVkBuffer* dst, VkQueue queue, VkBufferCopy* copyRegion = nullptr);

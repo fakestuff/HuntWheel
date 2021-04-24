@@ -4,7 +4,8 @@ namespace TF
 {
 	void RenderSystem::Init(GLFWwindow* window)
 	{
-		m_gfxVkDevice = new TF::GFX::GfxVkDevice(window);
+		m_gfxVkDevice = new GFX::GfxVkDevice(window); // construct instance and physical device
+		m_swapChain = new GFX::GfxVkSwapChain(m_gfxVkDevice);
 	}
 	void RenderSystem::Tick(double dt, entt::registry& reg)
 	{
@@ -12,6 +13,7 @@ namespace TF
 	}
 	void RenderSystem::Terminate()
 	{
+		delete m_swapChain;
 		delete m_gfxVkDevice;
 	}
 }

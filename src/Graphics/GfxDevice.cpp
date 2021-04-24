@@ -43,7 +43,11 @@ namespace GFX {
 		CreateInstance(true);
 		CreateSurface();
 		ChoosePhysicalDevice();
-		assert(this->m_physicalDevice);
+		if (this->m_physicalDevice == VK_NULL_HANDLE)
+		{
+			throw std::runtime_error("Could not find physical device device: \n");
+		}
+		
 		// Store Properties features, limits and properties of the physical device for later use
 		// Device properties also contain limits and sparse properties
 		vkGetPhysicalDeviceProperties(this->m_physicalDevice, &m_properties);
@@ -72,6 +76,15 @@ namespace GFX {
 				}
 			}
 		}
+		VkPhysicalDeviceFeatures deviceFeatures{};
+		deviceFeatures.samplerAnisotropy = VK_TRUE;
+
+		void* deviceCreatepNextChain = nullptr;
+
+		VkResult res = CreateLogicalDevice(deviceFeatures, GDeviceExtensions, deviceCreatepNextChain);
+		if (res != VK_SUCCESS) {
+			throw std::runtime_error("Could not create Vulkan device: \n"+VkErrorString(res));
+		}
 	}
 	GfxVkDevice::~GfxVkDevice()
 	{
@@ -83,7 +96,14 @@ namespace GFX {
 		{
 			vkDestroyDevice(m_logicalDevice, nullptr);
 		}
-
+		if (m_surface)
+		{
+			vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+		}
+		if (m_instance)
+		{
+			vkDestroyInstance(m_instance, nullptr);
+		}
 	}
 
 	bool GfxVkDevice::CheckValidationLayerSupport()
@@ -180,13 +200,7 @@ namespace GFX {
 		}
 	}
 
-	void GfxVkDevice::CreateSurface()
-	{
-		if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create window surface");
-		}
-	}
+
 
 	bool GfxVkDevice::CheckDeviceExtensionSupport(VkPhysicalDevice device)
 	{
@@ -213,7 +227,6 @@ namespace GFX {
 		VkPhysicalDeviceFeatures deviceFeatures;
 		vkGetPhysicalDeviceProperties(device, &deviceProperties);
 		vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-		QueueFamilyIndices indices = FindQueueFamilies(device);
 		bool extensionsSupported = CheckDeviceExtensionSupport(device);
 
 		bool swapChainAdequate = false;
@@ -256,36 +269,23 @@ namespace GFX {
 		}
 	}
 
-	QueueFamilyIndices GfxVkDevice::FindQueueFamilies(VkPhysicalDevice device)
+	void GfxVkDevice::GetBackBufferSize(int* width, int* height)
 	{
-		QueueFamilyIndices indices;
-		// Logic to find queue family indices to populate struct with
-
-		uint32_t queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-		int i = 0;
-		for (const auto& queueFamily : queueFamilies)
-		{
-			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-			{
-				indices.m_graphics = i;
-			}
-			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
-			if (presentSupport)
-			{
-				indices.m_present = i;
-			}
-			i++;
-		}
-		// TODO handle compute queue later
-		return indices;
+		glfwGetFramebufferSize(m_window, width, height);
 	}
 
+	void GfxVkDevice::CreateSurface()
+	{
+		if (glfwCreateWindowSurface(
+			m_instance,
+			m_window,
+			nullptr,
+			&m_surface)
+			!= VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create window surface");
+		}
+	}
 
 
 	void GfxVkDevice::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -369,6 +369,24 @@ namespace GFX {
 			}
 		}
 
+		if (queueFlags & VK_QUEUE_GRAPHICS_BIT)
+		{
+			for (uint32_t i = 0; i < static_cast<uint32_t>(m_queueFamilyProperties.size()); i++)
+			{
+				if ((m_queueFamilyProperties[i].queueFlags & queueFlags))
+				{
+					
+					VkBool32 presentSupport = false;
+					vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, m_surface, &presentSupport);
+					if (presentSupport)
+					{
+						return i;
+					}
+					
+				}
+			}
+		}
+
 		// For other queue types or if no separate compute queue is present, return the first one to support the requested flags
 		for (uint32_t i = 0; i < static_cast<uint32_t>(m_queueFamilyProperties.size()); i++)
 		{
@@ -418,6 +436,7 @@ namespace GFX {
 		else
 		{
 			m_queueFamilyIndices.m_graphics = VK_NULL_HANDLE;
+			throw std::runtime_error("Could not find a queue support both graphics and present");
 		}
 
 		// Dedicated compute queue
@@ -515,6 +534,7 @@ namespace GFX {
 		}
 
 		// Create a default command pool for graphics command buffers
+		std::cout << "Created logical device" << std::endl;
 		m_commandPool = CreateCommandPool(m_queueFamilyIndices.m_graphics);
 
 		return result;
@@ -675,6 +695,7 @@ namespace GFX {
 		cmdPoolInfo.flags = createFlags;
 		VkCommandPool cmdPool;
 		VK_CHECK_RESULT(vkCreateCommandPool(m_logicalDevice, &cmdPoolInfo, nullptr, &cmdPool));
+		std::cout << "Created cmd pool with queue family index: " << queueFamilyIndex << std::endl;
 		return cmdPool;
 	}
 	/**
